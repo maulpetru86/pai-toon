@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── FUNGSI HELPER ────────────────────────────────────
+    
+    // Cek apakah user sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Cek apakah user adalah admin (berdasarkan field role di dokumen users)
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Cek apakah user adalah pemilik dokumen (UID cocok dengan doc ID)
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ─── KOLEKSI: users ──────────────────────────────────
+    // Admin bisa baca/tulis semua user.
+    // User biasa hanya bisa baca & update profil sendiri.
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // ─── KOLEKSI: categories ─────────────────────────────
+    // Publik bisa baca (untuk filter komik).
+    // Hanya admin yang bisa tulis.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── KOLEKSI: comics ─────────────────────────────────
+    // Publik bisa baca komik yang sudah published.
+    // Authenticated user bisa baca semua (termasuk draft, untuk admin preview).
+    // Hanya admin yang bisa tulis.
+    match /comics/{comicId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+
+      // ─── SUB-KOLEKSI: chapters ───────────────────────
+      // Publik bisa baca chapter yang sudah published.
+      // Hanya admin yang bisa tulis.
+      match /chapters/{chapterId} {
+        allow read: if resource.data.isPublished == true || isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
+    // ─── DEFAULT: tolak semua yang tidak cocok ───────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

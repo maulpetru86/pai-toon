@@ -1,0 +1,221 @@
+/**
+ * Mock data untuk development.
+ * Akan diganti dengan data dari Firestore di fase selanjutnya.
+ */
+
+import type { Comic, Chapter, Category } from "@/types";
+import { Timestamp } from "firebase/firestore";
+
+const now = Timestamp.now();
+
+// ─── KATEGORI ──────────────────────────────────────
+export const MOCK_CATEGORIES: Category[] = [
+  { id: "cat-1", name: "Akidah Akhlak", slug: "akidah-akhlak", iconEmoji: "🕌", description: "Keimanan dan budi pekerti Islam", order: 1, createdAt: now, updatedAt: now },
+  { id: "cat-2", name: "Fikih", slug: "fikih", iconEmoji: "📖", description: "Hukum-hukum Islam", order: 2, createdAt: now, updatedAt: now },
+  { id: "cat-3", name: "Qur'an & Hadis", slug: "quran-hadis", iconEmoji: "📜", description: "Al-Qur'an dan Hadis Nabi", order: 3, createdAt: now, updatedAt: now },
+  { id: "cat-4", name: "Sejarah Islam", slug: "sejarah-islam", iconEmoji: "🏛️", description: "Peradaban dan tokoh Islam", order: 4, createdAt: now, updatedAt: now },
+];
+
+// ─── KOMIK ─────────────────────────────────────────
+export const MOCK_COMICS: Comic[] = [
+  {
+    id: "comic-1",
+    title: "Iman Kepada Allah: Perjalanan Ardi",
+    slug: "iman-kepada-allah",
+    description: "Ardi, siswa SMA yang penuh rasa ingin tahu, memulai perjalanan spiritual untuk memahami makna sejati iman kepada Allah. Melalui petualangan dan dialog dengan guru bijaknya, ia menemukan keindahan tauhid dan bukti-bukti kebesaran Allah di alam semesta.",
+    categoryId: "cat-1",
+    coverUrl: "/images/covers/iman-kepada-allah.png",
+    status: "published",
+    tags: ["akidah-akhlak", "tauhid", "kelas-10"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 5,
+    totalReaders: 1240,
+    rating: 4.8,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "comic-2",
+    title: "Shalat: Tiang Agama",
+    slug: "shalat-tiang-agama",
+    description: "Komik seri tentang pentingnya shalat sebagai tiang agama. Menceritakan kisah Nisa yang berjuang menjaga shalatnya di tengah kesibukan sekolah dan kehidupan sosial remaja modern.",
+    categoryId: "cat-2",
+    coverUrl: "/images/covers/shalat-tiang-agama.png",
+    status: "published",
+    tags: ["fikih", "ibadah", "kelas-10"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 8,
+    totalReaders: 2150,
+    rating: 4.9,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "comic-3",
+    title: "Akhlak Mulia: Kisah Para Sahabat",
+    slug: "akhlak-mulia",
+    description: "Kumpulan cerita inspiratif tentang akhlak para sahabat Nabi Muhammad SAW yang bisa menjadi teladan bagi generasi muda.",
+    categoryId: "cat-1",
+    coverUrl: "/images/covers/akhlak-mulia.png",
+    status: "published",
+    tags: ["akidah-akhlak", "sahabat", "kelas-11"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 12,
+    totalReaders: 3400,
+    rating: 4.7,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "comic-4",
+    title: "Peradaban Islam di Andalusia",
+    slug: "peradaban-andalusia",
+    description: "Menjelajahi kejayaan peradaban Islam di Spanyol. Dari Cordoba hingga Granada, temukan bagaimana ilmuwan Muslim membangun fondasi peradaban modern.",
+    categoryId: "cat-4",
+    coverUrl: "/images/covers/peradaban-andalusia.png",
+    status: "published",
+    tags: ["sejarah", "andalusia", "kelas-12"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 6,
+    totalReaders: 890,
+    rating: 4.6,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "comic-5",
+    title: "Mengenal Al-Qur'an: Wahyu Pertama",
+    slug: "mengenal-alquran",
+    description: "Kisah turunnya wahyu pertama di Gua Hira dan perjalanan Al-Qur'an hingga menjadi pedoman hidup umat manusia.",
+    categoryId: "cat-3",
+    coverUrl: "/images/covers/mengenal-alquran.png",
+    status: "published",
+    tags: ["quran", "wahyu", "kelas-10"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 4,
+    totalReaders: 1780,
+    rating: 4.9,
+    createdAt: now,
+    updatedAt: now,
+  },
+  {
+    id: "comic-6",
+    title: "Zakat & Sedekah: Berbagi Kebahagiaan",
+    slug: "zakat-sedekah",
+    description: "Rafi belajar tentang kekuatan zakat dan sedekah melalui pengalaman nyata membantu sesama. Komik yang mengajarkan kepedulian sosial dalam Islam.",
+    categoryId: "cat-2",
+    coverUrl: "/images/covers/zakat-sedekah.png",
+    status: "published",
+    tags: ["fikih", "zakat", "kelas-11"],
+    authorId: "admin-1",
+    authorName: "Tim PAI-Toon",
+    totalChapters: 3,
+    totalReaders: 650,
+    rating: 4.5,
+    createdAt: now,
+    updatedAt: now,
+  },
+];
+
+// ─── CHAPTER (untuk komik pertama: Iman Kepada Allah) ───
+export const MOCK_CHAPTERS: Record<string, Chapter[]> = {
+  "iman-kepada-allah": [
+    {
+      id: "ch-1",
+      comicId: "comic-1",
+      chapterNumber: 1,
+      title: "Awal Mula Pertanyaan",
+      thumbnailUrl: "/images/covers/iman-kepada-allah.png",
+      pages: [
+        "/images/pages/iman-kepada-allah/ch1/page-01.png",
+        "/images/pages/iman-kepada-allah/ch1/page-02.png",
+        "/images/pages/iman-kepada-allah/ch1/page-03.png",
+        "/images/pages/iman-kepada-allah/ch1/page-04.png",
+        "/images/pages/iman-kepada-allah/ch1/page-05.png",
+        "/images/pages/iman-kepada-allah/ch1/page-06.png",
+      ],
+      isPublished: true,
+      publishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "ch-2",
+      comicId: "comic-1",
+      chapterNumber: 2,
+      title: "Tanda-Tanda Kebesaran-Nya",
+      thumbnailUrl: "/images/covers/iman-kepada-allah.png",
+      pages: [
+        "/images/pages/iman-kepada-allah/ch1/page-03.png",
+        "/images/pages/iman-kepada-allah/ch1/page-04.png",
+        "/images/pages/iman-kepada-allah/ch1/page-05.png",
+        "/images/pages/iman-kepada-allah/ch1/page-01.png",
+        "/images/pages/iman-kepada-allah/ch1/page-06.png",
+      ],
+      isPublished: true,
+      publishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "ch-3",
+      comicId: "comic-1",
+      chapterNumber: 3,
+      title: "Makna Tauhid",
+      thumbnailUrl: "/images/covers/iman-kepada-allah.png",
+      pages: [
+        "/images/pages/iman-kepada-allah/ch1/page-02.png",
+        "/images/pages/iman-kepada-allah/ch1/page-05.png",
+        "/images/pages/iman-kepada-allah/ch1/page-04.png",
+        "/images/pages/iman-kepada-allah/ch1/page-06.png",
+      ],
+      isPublished: true,
+      publishedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "ch-4",
+      comicId: "comic-1",
+      chapterNumber: 4,
+      title: "Bukti-Bukti Iman",
+      pages: [],
+      isPublished: false,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      id: "ch-5",
+      comicId: "comic-1",
+      chapterNumber: 5,
+      title: "Iman yang Kokoh",
+      pages: [],
+      isPublished: false,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ],
+};
+
+// ─── HELPERS ─────────────────────────────────────
+export function getComicBySlug(slug: string): Comic | undefined {
+  return MOCK_COMICS.find((c) => c.slug === slug);
+}
+
+export function getChaptersByComicSlug(slug: string): Chapter[] {
+  return MOCK_CHAPTERS[slug] || [];
+}
+
+export function getChapterByNumber(slug: string, chapterNumber: number): Chapter | undefined {
+  const chapters = MOCK_CHAPTERS[slug] || [];
+  return chapters.find((c) => c.chapterNumber === chapterNumber);
+}
+
+export function getCategoryById(id: string): Category | undefined {
+  return MOCK_CATEGORIES.find((c) => c.id === id);
+}

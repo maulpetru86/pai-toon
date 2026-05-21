@@ -1,0 +1,63 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─── FUNGSI HELPER ────────────────────────────────────
+
+    // Cek apakah user sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Cek apakah user adalah admin (berdasarkan custom claim)
+    // Catatan: Untuk storage rules, kita gunakan custom claims
+    // karena storage rules tidak bisa mengakses Firestore.
+    // Custom claim di-set via Firebase Admin SDK / Cloud Function.
+    function isAdmin() {
+      return isAuthenticated() &&
+        request.auth.token.role == 'admin';
+    }
+
+    // Validasi: file harus berupa gambar
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Validasi: ukuran file maksimal 5MB
+    function isUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // ─── FOLDER: comics/ ──────────────────────────────────
+    // Menyimpan sampul komik dan halaman chapter.
+    // Struktur: comics/{comicId}/cover.webp
+    //           comics/{comicId}/chapters/{chapterId}/{pageNumber}.webp
+    match /comics/{allPaths=**} {
+      // Publik bisa baca (untuk menampilkan gambar komik)
+      allow read: if true;
+
+      // Hanya admin yang bisa upload, dan harus gambar < 5MB
+      allow write: if isAdmin() && isImage() && isUnder5MB();
+    }
+
+    // ─── FOLDER: avatars/ ─────────────────────────────────
+    // Foto profil pengguna.
+    // Struktur: avatars/{userId}/profile.webp
+    match /avatars/{userId}/{allPaths=**} {
+      // Publik bisa baca foto profil
+      allow read: if true;
+
+      // User hanya bisa upload foto sendiri, harus gambar < 5MB
+      allow write: if isAuthenticated() &&
+        request.auth.uid == userId &&
+        isImage() &&
+        isUnder5MB();
+    }
+
+    // ─── DEFAULT: tolak semua yang tidak cocok ────────────
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
