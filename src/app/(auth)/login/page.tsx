@@ -57,9 +57,24 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       router.push("/");
     } catch (err: unknown) {
+      console.error("Google login error:", err);
+      const errorCode = (err as { code?: string }).code || "";
       const msg = err instanceof Error ? err.message : "";
-      if (!msg.includes("popup-closed")) {
-        setError("Login dengan Google gagal.");
+
+      if (errorCode === "auth/popup-closed-by-user" || msg.includes("popup-closed")) {
+        // User menutup popup, tidak perlu tampilkan error
+        return;
+      } else if (errorCode === "auth/unauthorized-domain") {
+        setError("Domain ini belum diotorisasi di Firebase. Hubungi admin.");
+      } else if (errorCode === "auth/network-request-failed") {
+        setError("Koneksi gagal. Periksa internet Anda.");
+      } else if (errorCode === "auth/internal-error") {
+        setError("Terjadi kesalahan internal. Coba lagi nanti.");
+      } else if (errorCode === "auth/cancelled-popup-request") {
+        // Multiple popup request, abaikan
+        return;
+      } else {
+        setError(`Login dengan Google gagal. (${errorCode || msg})`);
       }
     } finally {
       setLoading(false);
