@@ -151,23 +151,11 @@ export default async function KomikDetailPage({ params }: PageProps) {
           </div>
 
           <div className="space-y-2">
-            {chapters.map((chapter) => {
+          {chapters.map((chapter) => {
               const isAvailable = chapter.isPublished;
-              const Wrapper = isAvailable ? Link : "div";
-              const wrapperProps = isAvailable
-                ? { href: `/baca/${comic.slug}/${chapter.chapterNumber}` }
-                : {};
 
-              return (
-                <Wrapper
-                  key={chapter.id}
-                  {...(wrapperProps as any)}
-                  className={`flex items-center justify-between p-4 rounded-xl border transition-all group ${
-                    isAvailable
-                      ? "border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md cursor-pointer"
-                      : "border-border/20 bg-muted/30 opacity-60 cursor-not-allowed"
-                  }`}
-                >
+              const content = (
+                <>
                   <div className="flex items-center gap-4">
                     {/* Nomor chapter */}
                     <div
@@ -209,7 +197,27 @@ export default async function KomikDetailPage({ params }: PageProps) {
                       Segera
                     </Badge>
                   )}
-                </Wrapper>
+                </>
+              );
+
+              const className = `flex items-center justify-between p-4 rounded-xl border transition-all group ${
+                isAvailable
+                  ? "border-border/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-md cursor-pointer"
+                  : "border-border/20 bg-muted/30 opacity-60 cursor-not-allowed"
+              }`;
+
+              return isAvailable ? (
+                <Link
+                  key={chapter.id}
+                  href={`/baca/${comic.slug}/${chapter.chapterNumber}`}
+                  className={className}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div key={chapter.id} className={className}>
+                  {content}
+                </div>
               );
             })}
           </div>

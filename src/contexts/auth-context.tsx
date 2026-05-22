@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { type User as FirebaseUser } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/config";
 import type { User, UserRole } from "@/types";
@@ -85,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           totalComicsRead: 0,
           xp: 0,
           level: 1,
-          createdAt: serverTimestamp() as any,
-          updatedAt: serverTimestamp() as any,
+          createdAt: serverTimestamp() as unknown as Timestamp,
+          updatedAt: serverTimestamp() as unknown as Timestamp,
         };
 
         await setDoc(userDocRef, newUser);

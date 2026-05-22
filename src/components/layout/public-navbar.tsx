@@ -30,7 +30,7 @@ export function PublicNavbar() {
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { firebaseUser, userProfile, isAuthenticated, isAdmin, loading } =
+  const { userProfile, isAuthenticated, isAdmin, loading } =
     useAuth();
   const router = useRouter();
 
