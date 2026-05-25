@@ -1,15 +1,22 @@
-"use client";
+import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
+import KomikChapterRedirect from "./client-page";
 
-import { useParams } from "next/navigation";
-import { redirect } from "next/navigation";
+export function generateStaticParams() {
+  const params: { slug: string; chapterId: string }[] = [];
+  for (const comic of MOCK_COMICS) {
+    const chapters = MOCK_CHAPTERS[comic.slug] || [];
+    for (const ch of chapters) {
+      if (ch.isPublished) {
+        params.push({
+          slug: comic.slug,
+          chapterId: String(ch.chapterNumber),
+        });
+      }
+    }
+  }
+  return params;
+}
 
-/**
- * Route alternatif: /komik/[slug]/[chapterId]
- * Redirect ke reader utama: /baca/[slug]/[chapterNumber]
- */
-export default function KomikChapterRedirect() {
-  const params = useParams<{ slug: string; chapterId: string }>();
-
-  // Redirect ke reader utama
-  redirect(`/baca/${params.slug}/${params.chapterId}`);
+export default function Page() {
+  return <KomikChapterRedirect />;
 }

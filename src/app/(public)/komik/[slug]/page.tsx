@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
+  MOCK_COMICS,
   getComicBySlug,
   getChaptersByComicSlug,
   getCategoryById,
@@ -21,6 +22,12 @@ import { notFound } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+}
+
+export function generateStaticParams() {
+  return MOCK_COMICS.map((comic) => ({
+    slug: comic.slug,
+  }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

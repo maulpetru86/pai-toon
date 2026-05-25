@@ -1,5 +1,5 @@
 # PAI-Toon CI/CD Pipeline
-# Deploy Next.js app ke Firebase App Hosting via Google Cloud
+# Deploy Next.js static export ke Firebase Hosting
 # Trigger: Push ke branch `main`
 
 name: Deploy to Firebase
@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Untuk Workload Identity Federation
 
     steps:
       # 1. Checkout kode
@@ -36,31 +35,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 4. Buat .env.local untuk build
+      # 4. Buat .env.local untuk build (Firebase public config keys)
       - name: Create environment file
         run: |
-          cat << EOF > .env.local
-          NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
-          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          cat <<EOF > .env.local
+          NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDxDA8y83XmYErWy1ZgYndSwBMHAXsBZyY
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=pai-toon.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID=pai-toon
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=pai-toon.firebasestorage.app
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=835935471496
+          NEXT_PUBLIC_FIREBASE_APP_ID=1:835935471496:web:9b2a7daa6f46f1691edc3d
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-QKTFFYEHRZ
           EOF
 
-      # 5. Build Next.js
+      # 5. Build Next.js (static export → folder out/)
       - name: Build application
         run: npm run build
 
-      # 6. Autentikasi ke Google Cloud (Workload Identity Federation)
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
-
-      # 7. Deploy ke Firebase Hosting
+      # 6. Deploy ke Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
