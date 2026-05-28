@@ -1,12 +1,11 @@
-﻿"use client";
+"use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Upload,
   X,
   Save,
   ImagePlus,
@@ -21,8 +20,11 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MOCK_COMICS, getChaptersByComicSlug } from "@/lib/mock-data";
+import { MOCK_COMICS } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/firebase/storage";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import type { Chapter } from "@/types";
 
 interface PageFile {
   id: string;
@@ -38,29 +40,66 @@ export default function AdminEditChapterPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const comic = MOCK_COMICS.find((c) => c.id === params.id);
-  const chapters = comic ? getChaptersByComicSlug(comic.slug) : [];
-  const chapter = chapters.find((c) => c.id === params.chapterId);
 
-  const [title, setTitle] = useState(chapter?.title || "");
-  const [isPublished, setIsPublished] = useState(chapter?.isPublished || false);
+  const [title, setTitle] = useState("");
+  const [isPublished, setIsPublished] = useState(false);
+  const [chapterNumber, setChapterNumber] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pageFiles, setPageFiles] = useState<PageFile[]>([]);
+  const [chapterFound, setChapterFound] = useState(true);
 
-  // Existing pages
-  const existingPages: PageFile[] = (chapter?.pages || []).map((url, i) => ({
-    id: `existing-${i}`,
-    preview: url,
-    url,
-    status: "existing" as const,
-  }));
+  // Fetch chapter data from Firestore
+  useEffect(() => {
+    async function fetchChapter() {
+      try {
+        const chapterRef = doc(
+          db,
+          "comics",
+          params.id,
+          "chapters",
+          params.chapterId
+        );
+        const chapterSnap = await getDoc(chapterRef);
 
-  const [pageFiles, setPageFiles] = useState<PageFile[]>(existingPages);
+        if (chapterSnap.exists()) {
+          const data = chapterSnap.data() as Omit<Chapter, "id">;
+          setTitle(data.title || "");
+          setIsPublished(data.isPublished || false);
+          setChapterNumber(data.chapterNumber || 1);
+
+          // Load existing pages
+          const existingPages: PageFile[] = (data.pages || []).map(
+            (url: string, i: number) => ({
+              id: `existing-${i}`,
+              preview: url,
+              url,
+              status: "existing" as const,
+            })
+          );
+          setPageFiles(existingPages);
+        } else {
+          setChapterFound(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch chapter:", error);
+        setChapterFound(false);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchChapter();
+  }, [params.id, params.chapterId]);
 
   const handleFilesSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []).filter((f) =>
         f.type.startsWith("image/")
       );
-      files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      files.sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { numeric: true })
+      );
 
       const newPages: PageFile[] = files.map((file) => ({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -76,7 +115,11 @@ export default function AdminEditChapterPage() {
   );
 
   const removePage = (id: string) => {
-    setPageFiles((prev) => prev.filter((p) => p.id !== id));
+    setPageFiles((prev) => {
+      const page = prev.find((p) => p.id === id);
+      if (page && page.file) URL.revokeObjectURL(page.preview);
+      return prev.filter((p) => p.id !== id);
+    });
   };
 
   const movePage = (index: number, direction: "up" | "down") => {
@@ -91,9 +134,14 @@ export default function AdminEditChapterPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!title.trim()) return alert("Judul chapter wajib diisi.");
+
     setSaving(true);
 
     try {
+      const comicSlug = comic?.slug || params.id;
+
       // Upload new files
       for (const page of pageFiles) {
         if (page.status === "pending" && page.file) {
@@ -103,7 +151,7 @@ export default function AdminEditChapterPage() {
             )
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const path = `comics/${comic?.slug}/ch${chapter?.chapterNumber}/page_${Date.now()}.${ext}`;
+          const path = `comics/${comicSlug}/ch${chapterNumber}/page_${Date.now()}.${ext}`;
           const result = await uploadFile(path, page.file);
           setPageFiles((prev) =>
             prev.map((p) =>
@@ -115,8 +163,45 @@ export default function AdminEditChapterPage() {
         }
       }
 
-      // TODO: Update Firestore document
-      await new Promise((r) => setTimeout(r, 500));
+      // Collect all page URLs (existing + newly uploaded)
+      // We need to get the latest state of pageFiles after uploads
+      // Use a ref-like approach by building the array from current state
+      const finalPages: string[] = [];
+      for (const page of pageFiles) {
+        if (page.url) {
+          finalPages.push(page.url);
+        }
+      }
+
+      // But we also need the newly uploaded URLs that were set via setPageFiles
+      // So let's collect them differently:
+      const allPageUrls: string[] = await new Promise((resolve) => {
+        setPageFiles((currentFiles) => {
+          const urls = currentFiles
+            .map((p) => p.url)
+            .filter((url): url is string => !!url);
+          resolve(urls);
+          return currentFiles; // Don't change state
+        });
+      });
+
+      // Update Firestore document
+      const chapterRef = doc(
+        db,
+        "comics",
+        params.id,
+        "chapters",
+        params.chapterId
+      );
+
+      await updateDoc(chapterRef, {
+        title: title.trim(),
+        isPublished,
+        pages: allPageUrls,
+        publishedAt: isPublished ? serverTimestamp() : null,
+        updatedAt: serverTimestamp(),
+      });
+
       router.push(`/admin/komik/${params.id}/chapter`);
     } catch (error) {
       console.error("Save failed:", error);
@@ -126,7 +211,16 @@ export default function AdminEditChapterPage() {
     }
   };
 
-  if (!comic || !chapter) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Memuat chapter...</span>
+      </div>
+    );
+  }
+
+  if (!comic || !chapterFound) {
     return (
       <div className="text-center py-20">
         <p className="text-lg font-medium">Chapter tidak ditemukan</p>
@@ -147,7 +241,7 @@ export default function AdminEditChapterPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Edit Chapter {chapter.chapterNumber}
+            Edit Chapter {chapterNumber}
           </h1>
           <p className="text-sm text-muted-foreground">{comic.title}</p>
         </div>
@@ -220,12 +314,14 @@ export default function AdminEditChapterPage() {
                       ? "border-green-500/30 bg-green-500/5"
                       : page.status === "uploading"
                       ? "border-primary/30 bg-primary/5"
+                      : page.status === "error"
+                      ? "border-destructive/30 bg-destructive/5"
                       : "border-yellow-500/30 bg-yellow-500/5"
                   }`}
                 >
                   <div className="flex flex-col gap-0.5 flex-shrink-0">
-                    <button type="button" onClick={() => movePage(index, "up")} disabled={index === 0} className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-30">Γû▓</button>
-                    <button type="button" onClick={() => movePage(index, "down")} disabled={index === pageFiles.length - 1} className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-30">Γû╝</button>
+                    <button type="button" onClick={() => movePage(index, "up")} disabled={index === 0 || saving} className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-30">▲</button>
+                    <button type="button" onClick={() => movePage(index, "down")} disabled={index === pageFiles.length - 1 || saving} className="h-4 w-4 flex items-center justify-center text-muted-foreground hover:text-primary disabled:opacity-30">▼</button>
                   </div>
 
                   <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-xs font-bold flex-shrink-0">
@@ -249,6 +345,7 @@ export default function AdminEditChapterPage() {
                     {page.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                     {page.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
                     {page.status === "pending" && <Badge variant="outline" className="text-[10px]">Baru</Badge>}
+                    {page.status === "error" && <AlertCircle className="h-4 w-4 text-destructive" />}
                   </div>
 
                   {!saving && (

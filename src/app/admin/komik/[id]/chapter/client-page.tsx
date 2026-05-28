@@ -1,36 +1,70 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
   Plus,
   Layers,
-  BookOpen,
   GripVertical,
   Pencil,
   Trash2,
   Eye,
   EyeOff,
   ImagePlus,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { getComicBySlug, getChaptersByComicSlug, MOCK_COMICS } from "@/lib/mock-data";
+import { Card, CardContent } from "@/components/ui/card";
+import { MOCK_COMICS } from "@/lib/mock-data";
+import { collection, getDocs, orderBy, query, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 import type { Chapter } from "@/types";
 
 export default function AdminChapterPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const comicId = params.id;
 
-  // Cari komik berdasarkan ID (dari mock data)
   const comic = MOCK_COMICS.find((c) => c.id === comicId);
-  const comicBySlug = comic ? getComicBySlug(comic.slug) : null;
-  const chapters = comic ? getChaptersByComicSlug(comic.slug) : [];
+
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch chapters from Firestore
+  useEffect(() => {
+    async function fetchChapters() {
+      try {
+        const chaptersRef = collection(db, "comics", comicId, "chapters");
+        const q = query(chaptersRef, orderBy("chapterNumber", "asc"));
+        const snapshot = await getDocs(q);
+        const chaptersData = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as Chapter[];
+        setChapters(chaptersData);
+      } catch (error) {
+        console.error("Failed to fetch chapters:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchChapters();
+  }, [comicId]);
+
+  const handleDelete = async (chapter: Chapter) => {
+    if (!confirm(`Hapus chapter "${chapter.title}"?`)) return;
+
+    try {
+      await deleteDoc(doc(db, "comics", comicId, "chapters", chapter.id));
+      setChapters((prev) => prev.filter((c) => c.id !== chapter.id));
+    } catch (error) {
+      console.error("Failed to delete chapter:", error);
+      alert("Gagal menghapus chapter.");
+    }
+  };
 
   if (!comic) {
     return (
@@ -69,8 +103,13 @@ export default function AdminChapterPage() {
         </Link>
       </div>
 
-      {/* Chapter List */}
-      {chapters.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-3 text-muted-foreground">Memuat chapter...</span>
+        </div>
+      ) : chapters.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Layers className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
@@ -137,11 +176,7 @@ export default function AdminChapterPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => {
-                      if (confirm(`Hapus chapter "${chapter.title}"?`)) {
-                        // TODO: Implement delete
-                      }
-                    }}
+                    onClick={() => handleDelete(chapter)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
