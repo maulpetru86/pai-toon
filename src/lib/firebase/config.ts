@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import {
+  initializeAuth,
+  getAuth,
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  type Auth,
+} from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
@@ -14,11 +20,22 @@ const firebaseConfig = {
 };
 
 // Inisialisasi Firebase (singleton pattern — hindari duplikasi saat HMR)
-const app: FirebaseApp = !getApps().length
-  ? initializeApp(firebaseConfig)
-  : getApp();
+let app: FirebaseApp;
+let auth: Auth;
 
-const auth: Auth = getAuth(app);
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+  // Gunakan initializeAuth dengan browserLocalPersistence agar sesi
+  // tetap tersimpan di IndexedDB dan tidak hilang saat tab ditutup.
+  auth = initializeAuth(app, {
+    persistence: browserLocalPersistence,
+    popupRedirectResolver: browserPopupRedirectResolver,
+  });
+} else {
+  app = getApp();
+  auth = getAuth(app);
+}
+
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
