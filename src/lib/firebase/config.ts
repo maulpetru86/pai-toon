@@ -4,6 +4,7 @@ import {
   getAuth,
   browserLocalPersistence,
   browserPopupRedirectResolver,
+  inMemoryPersistence,
   type Auth,
 } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
@@ -27,9 +28,11 @@ if (!getApps().length) {
   app = initializeApp(firebaseConfig);
   // Gunakan initializeAuth dengan browserLocalPersistence agar sesi
   // tetap tersimpan di IndexedDB dan tidak hilang saat tab ditutup.
+  // Di environment SSR/build, gunakan inMemoryPersistence sebagai fallback.
+  const isServer = typeof window === "undefined";
   auth = initializeAuth(app, {
-    persistence: browserLocalPersistence,
-    popupRedirectResolver: browserPopupRedirectResolver,
+    persistence: isServer ? inMemoryPersistence : browserLocalPersistence,
+    ...(!isServer && { popupRedirectResolver: browserPopupRedirectResolver }),
   });
 } else {
   app = getApp();
