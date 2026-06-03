@@ -20,9 +20,9 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { MOCK_COMICS } from "@/lib/mock-data";
+import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/firebase/storage";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Chapter } from "@/types";
 
@@ -48,8 +48,9 @@ export default function AdminEditChapterPage() {
   const [loading, setLoading] = useState(true);
   const [pageFiles, setPageFiles] = useState<PageFile[]>([]);
   const [chapterFound, setChapterFound] = useState(true);
+  const [isFromMock, setIsFromMock] = useState(false);
 
-  // Fetch chapter data from Firestore
+  // Fetch chapter data from Firestore, fallback to mock-data
   useEffect(() => {
     async function fetchChapter() {
       try {
@@ -79,18 +80,66 @@ export default function AdminEditChapterPage() {
           );
           setPageFiles(existingPages);
         } else {
-          setChapterFound(false);
+          // Fallback: cari di mock-data
+          if (comic) {
+            const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
+            const mockChapter = mockChapters.find((c) => c.id === params.chapterId);
+            if (mockChapter) {
+              setTitle(mockChapter.title || "");
+              setIsPublished(mockChapter.isPublished || false);
+              setChapterNumber(mockChapter.chapterNumber || 1);
+              setIsFromMock(true);
+
+              const existingPages: PageFile[] = (mockChapter.pages || []).map(
+                (url: string, i: number) => ({
+                  id: `existing-${i}`,
+                  preview: url,
+                  url,
+                  status: "existing" as const,
+                })
+              );
+              setPageFiles(existingPages);
+            } else {
+              setChapterFound(false);
+            }
+          } else {
+            setChapterFound(false);
+          }
         }
       } catch (error) {
-        console.error("Failed to fetch chapter:", error);
-        setChapterFound(false);
+        console.error("Failed to fetch chapter from Firestore, using mock data:", error);
+        // Fallback ke mock-data
+        if (comic) {
+          const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
+          const mockChapter = mockChapters.find((c) => c.id === params.chapterId);
+          if (mockChapter) {
+            setTitle(mockChapter.title || "");
+            setIsPublished(mockChapter.isPublished || false);
+            setChapterNumber(mockChapter.chapterNumber || 1);
+            setIsFromMock(true);
+
+            const existingPages: PageFile[] = (mockChapter.pages || []).map(
+              (url: string, i: number) => ({
+                id: `existing-${i}`,
+                preview: url,
+                url,
+                status: "existing" as const,
+              })
+            );
+            setPageFiles(existingPages);
+          } else {
+            setChapterFound(false);
+          }
+        } else {
+          setChapterFound(false);
+        }
       } finally {
         setLoading(false);
       }
     }
 
     fetchChapter();
-  }, [params.id, params.chapterId]);
+  }, [params.id, params.chapterId, comic]);
 
   const handleFilesSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {

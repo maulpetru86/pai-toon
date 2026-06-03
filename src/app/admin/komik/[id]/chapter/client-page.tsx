@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { MOCK_COMICS } from "@/lib/mock-data";
+import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
 import { collection, getDocs, orderBy, query, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Chapter } from "@/types";
@@ -32,7 +32,7 @@ export default function AdminChapterPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch chapters from Firestore
+  // Fetch chapters from Firestore, fallback to mock-data
   useEffect(() => {
     async function fetchChapters() {
       try {
@@ -43,16 +43,28 @@ export default function AdminChapterPage() {
           id: d.id,
           ...d.data(),
         })) as Chapter[];
-        setChapters(chaptersData);
+
+        // Jika Firestore kosong, gunakan mock-data sebagai fallback
+        if (chaptersData.length > 0) {
+          setChapters(chaptersData);
+        } else if (comic) {
+          const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
+          setChapters(mockChapters);
+        }
       } catch (error) {
-        console.error("Failed to fetch chapters:", error);
+        console.error("Failed to fetch chapters from Firestore, using mock data:", error);
+        // Fallback ke mock-data jika Firestore error
+        if (comic) {
+          const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
+          setChapters(mockChapters);
+        }
       } finally {
         setLoading(false);
       }
     }
 
     fetchChapters();
-  }, [comicId]);
+  }, [comicId, comic]);
 
   const handleDelete = async (chapter: Chapter) => {
     if (!confirm(`Hapus chapter "${chapter.title}"?`)) return;
