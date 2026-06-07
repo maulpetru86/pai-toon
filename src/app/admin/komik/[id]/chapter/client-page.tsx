@@ -18,63 +18,39 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
-import { collection, getDocs, orderBy, query, deleteDoc, doc } from "firebase/firestore";
+import { fetchComicById, fetchChaptersByComicId } from "@/lib/firebase/firestore";
+import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
-import type { Chapter } from "@/types";
+import type { Comic, Chapter } from "@/types";
 
 export default function AdminChapterPage() {
   const params = useParams<{ id: string }>();
   const comicId = params.id;
 
-  const comic = MOCK_COMICS.find((c) => c.id === comicId);
-
+  const [comic, setComic] = useState<Comic | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch chapters from Firestore, fallback to mock-data
   useEffect(() => {
-    async function fetchChapters() {
+    async function load() {
       try {
-        const chaptersRef = collection(db, "comics", comicId, "chapters");
-        const q = query(chaptersRef, orderBy("chapterNumber", "asc"));
-        const snapshot = await getDocs(q);
-        const chaptersData = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as Chapter[];
-
-        // Merge: Firestore chapters take priority, mock chapters fill in the gaps
-        if (comic) {
-          const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
-          const firestoreIds = new Set(chaptersData.map((c) => c.id));
-          // Add mock chapters that are NOT yet in Firestore
-          const mockOnly = mockChapters.filter((mc) => !firestoreIds.has(mc.id));
-          const merged = [...chaptersData, ...mockOnly].sort(
-            (a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)
-          );
-          setChapters(merged);
-        } else {
-          setChapters(chaptersData);
-        }
+        const [comicData, chaptersData] = await Promise.all([
+          fetchComicById(comicId),
+          fetchChaptersByComicId(comicId),
+        ]);
+        setComic(comicData);
+        setChapters(chaptersData);
       } catch (error) {
-        console.error("Failed to fetch chapters from Firestore, using mock data:", error);
-        // Fallback ke mock-data jika Firestore error
-        if (comic) {
-          const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
-          setChapters(mockChapters);
-        }
+        console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
       }
     }
-
-    fetchChapters();
-  }, [comicId, comic]);
+    load();
+  }, [comicId]);
 
   const handleDelete = async (chapter: Chapter) => {
     if (!confirm(`Hapus chapter "${chapter.title}"?`)) return;
-
     try {
       await deleteDoc(doc(db, "comics", comicId, "chapters", chapter.id));
       setChapters((prev) => prev.filter((c) => c.id !== chapter.id));
@@ -83,6 +59,15 @@ export default function AdminChapterPage() {
       alert("Gagal menghapus chapter.");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-3 text-muted-foreground">Memuat...</span>
+      </div>
+    );
+  }
 
   if (!comic) {
     return (
@@ -97,7 +82,6 @@ export default function AdminChapterPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin/komik">
           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -121,13 +105,7 @@ export default function AdminChapterPage() {
         </Link>
       </div>
 
-      {/* Loading */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-3 text-muted-foreground">Memuat chapter...</span>
-        </div>
-      ) : chapters.length === 0 ? (
+      {chapters.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Layers className="h-12 w-12 mx-auto text-muted-foreground/40 mb-4" />
@@ -147,10 +125,7 @@ export default function AdminChapterPage() {
           {chapters.map((chapter) => (
             <Card key={chapter.id} className="group hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex items-center gap-4">
-                {/* Drag handle */}
                 <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab flex-shrink-0" />
-
-                {/* Chapter number */}
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold flex-shrink-0 ${
                     chapter.isPublished
@@ -160,8 +135,6 @@ export default function AdminChapterPage() {
                 >
                   {chapter.chapterNumber}
                 </div>
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{chapter.title}</p>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
@@ -182,8 +155,6 @@ export default function AdminChapterPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Actions */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Link href={`/admin/komik/${comicId}/chapter/${chapter.id}`}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">

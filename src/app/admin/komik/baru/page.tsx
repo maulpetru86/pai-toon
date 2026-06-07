@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   ArrowLeft,
-  Upload,
   X,
   Save,
   ImagePlus,
@@ -26,11 +25,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { MOCK_CATEGORIES } from "@/lib/mock-data";
+import { fetchCategories } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Link from "next/link";
+import type { Category } from "@/types";
 
 function slugify(text: string): string {
   return text
@@ -46,6 +46,16 @@ export default function AdminKomikBaruPage() {
   const { firebaseUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCats, setLoadingCats] = useState(true);
+
+  useEffect(() => {
+    fetchCategories()
+      .then(setCategories)
+      .catch(console.error)
+      .finally(() => setLoadingCats(false));
+  }, []);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -60,7 +70,6 @@ export default function AdminKomikBaruPage() {
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       alert("Hanya file gambar yang diperbolehkan.");
       return;
@@ -69,7 +78,6 @@ export default function AdminKomikBaruPage() {
       alert("Ukuran file maksimal 5MB.");
       return;
     }
-
     setCoverFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setCoverPreview(reader.result as string);
@@ -84,7 +92,6 @@ export default function AdminKomikBaruPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!title.trim()) return alert("Judul wajib diisi.");
     if (!categoryId) return alert("Kategori wajib dipilih.");
     if (!firebaseUser) return alert("Anda harus login.");
@@ -94,8 +101,6 @@ export default function AdminKomikBaruPage() {
 
     try {
       let coverUrl = "";
-
-      // Upload cover ke Firebase Storage
       if (coverFile) {
         setUploadProgress(20);
         const path = `comics/${slug}/cover_${Date.now()}.${coverFile.name.split(".").pop()}`;
@@ -104,7 +109,6 @@ export default function AdminKomikBaruPage() {
         setUploadProgress(60);
       }
 
-      // Simpan ke Firestore
       const tags = tagsInput
         .split(",")
         .map((t) => t.trim().toLowerCase())
@@ -128,8 +132,6 @@ export default function AdminKomikBaruPage() {
       });
 
       setUploadProgress(100);
-
-      // Redirect ke daftar komik
       router.push("/admin/komik");
     } catch (error) {
       console.error("Gagal menyimpan komik:", error);
@@ -141,7 +143,6 @@ export default function AdminKomikBaruPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin/komik">
           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -157,13 +158,11 @@ export default function AdminKomikBaruPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ═══ Detail Komik ═══ */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Detail Komik</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Judul */}
             <div className="space-y-2">
               <Label htmlFor="title">Judul Komik *</Label>
               <Input
@@ -179,8 +178,6 @@ export default function AdminKomikBaruPage() {
                 </p>
               )}
             </div>
-
-            {/* Deskripsi */}
             <div className="space-y-2">
               <Label htmlFor="description">Sinopsis / Deskripsi</Label>
               <Textarea
@@ -191,25 +188,27 @@ export default function AdminKomikBaruPage() {
                 rows={4}
               />
             </div>
-
-            {/* Kategori */}
             <div className="space-y-2">
               <Label>Kategori *</Label>
-              <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kategori..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {MOCK_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.iconEmoji} {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {loadingCats ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Memuat kategori...
+                </div>
+              ) : (
+                <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kategori..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.iconEmoji} {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
-
-            {/* Tags */}
             <div className="space-y-2">
               <Label htmlFor="tags">Tags</Label>
               <Input
@@ -235,7 +234,6 @@ export default function AdminKomikBaruPage() {
           </CardContent>
         </Card>
 
-        {/* ═══ Cover Image ═══ */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Cover Komik</CardTitle>
@@ -248,31 +246,18 @@ export default function AdminKomikBaruPage() {
               className="hidden"
               onChange={handleCoverSelect}
             />
-
             {coverPreview ? (
               <div className="flex items-start gap-4">
                 <div className="relative w-32 h-48 rounded-lg overflow-hidden border bg-muted">
-                  <Image
-                    src={coverPreview}
-                    alt="Cover preview"
-                    fill
-                    className="object-cover"
-                  />
+                  <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">{coverFile?.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {coverFile && (coverFile.size / 1024 / 1024).toFixed(2)} MB
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={removeCover}
-                    className="gap-1.5"
-                  >
-                    <X className="h-3 w-3" />
-                    Ganti
+                  <Button type="button" variant="outline" size="sm" onClick={removeCover} className="gap-1.5">
+                    <X className="h-3 w-3" />Ganti
                   </Button>
                 </div>
               </div>
@@ -296,16 +281,13 @@ export default function AdminKomikBaruPage() {
 
         <Separator />
 
-        {/* ═══ Submit ═══ */}
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
             Komik akan disimpan sebagai <Badge variant="secondary" className="text-[10px]">Draft</Badge>
           </p>
           <div className="flex gap-3">
             <Link href="/admin/komik">
-              <Button type="button" variant="outline">
-                Batal
-              </Button>
+              <Button type="button" variant="outline">Batal</Button>
             </Link>
             <Button type="submit" disabled={saving} className="gap-2 min-w-[120px]">
               {saving ? (

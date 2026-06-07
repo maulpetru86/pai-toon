@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDocuments, where, orderBy } from "@/lib/firebase/firestore";
+import { fetchComics, fetchPublishedComics } from "@/lib/firebase/firestore";
 import type { Comic } from "@/types";
 
 interface UseComicOptions {
@@ -25,16 +25,22 @@ export function useComic(options: UseComicOptions = {}) {
         setLoading(true);
         setError(null);
 
-        const constraints = [
-          where("status", "==", options.status ?? "published"),
-          orderBy("updatedAt", "desc"),
-        ];
+        // Fetch all or published comics based on status
+        const fetchFn =
+          options.status === "published" ? fetchPublishedComics : fetchComics;
+        let data = await fetchFn();
 
+        // Client-side filtering
+        if (options.status && options.status !== "published") {
+          data = data.filter((c) => c.status === options.status);
+        }
         if (options.categoryId) {
-          constraints.push(where("categoryId", "==", options.categoryId));
+          data = data.filter((c) => c.categoryId === options.categoryId);
+        }
+        if (options.limitCount) {
+          data = data.slice(0, options.limitCount);
         }
 
-        const data = await getDocuments<Comic>("comics", constraints);
         if (!cancelled) setComics(data);
       } catch (err) {
         if (!cancelled) {
@@ -47,7 +53,7 @@ export function useComic(options: UseComicOptions = {}) {
       }
     })();
     return () => { cancelled = true; };
-  }, [options.categoryId, options.status]);
+  }, [options.categoryId, options.status, options.limitCount]);
 
   return { comics, loading, error };
 }

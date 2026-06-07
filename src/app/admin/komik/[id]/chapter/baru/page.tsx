@@ -1,10 +1,8 @@
-import { MOCK_COMICS } from "@/lib/mock-data";
+import { COMIC_IDS } from "@/lib/static-params";
 import AdminChapterBaruPage from "./client-page";
 
 export function generateStaticParams() {
-  return MOCK_COMICS.map((comic) => ({
-    id: comic.id,
-  }));
+  return COMIC_IDS.map((id) => ({ id }));
 }
 
 export default function Page() {

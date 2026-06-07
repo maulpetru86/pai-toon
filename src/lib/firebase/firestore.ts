@@ -1,99 +1,123 @@
+/**
+ * Firestore service layer — menggantikan mock-data.ts
+ * Semua fungsi fetch data dari Firestore.
+ */
+
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
   limit,
-  startAfter,
-  type DocumentData,
   type QueryConstraint,
-  type DocumentReference,
-  type DocumentSnapshot,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "./config";
+import type { Comic, Chapter, Category } from "@/types";
 
-/**
- * Referensi koleksi Firestore.
- */
-export function getCollectionRef(collectionName: string) {
-  return collection(db, collectionName);
+// ─── CATEGORIES ─────────────────────────────────────
+
+/** Ambil semua kategori, urut berdasarkan 'order'. */
+export async function fetchCategories(): Promise<Category[]> {
+  const q = query(collection(db, "categories"), orderBy("order", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Category);
 }
 
-/**
- * Referensi dokumen Firestore.
- */
-export function getDocRef(collectionName: string, docId: string) {
-  return doc(db, collectionName, docId);
-}
-
-/**
- * Ambil satu dokumen berdasarkan ID.
- */
-export async function getDocument<T = DocumentData>(
-  collectionName: string,
-  docId: string
-): Promise<(T & { id: string }) | null> {
-  const snap: DocumentSnapshot = await getDoc(doc(db, collectionName, docId));
+/** Ambil kategori berdasarkan ID. */
+export async function fetchCategoryById(
+  id: string
+): Promise<Category | null> {
+  const snap = await getDoc(doc(db, "categories", id));
   if (!snap.exists()) return null;
-  return { id: snap.id, ...(snap.data() as T) };
+  return { id: snap.id, ...snap.data() } as Category;
 }
 
-/**
- * Ambil banyak dokumen dengan filter opsional.
- */
-export async function getDocuments<T = DocumentData>(
-  collectionName: string,
-  constraints: QueryConstraint[] = []
-): Promise<(T & { id: string })[]> {
-  const q = query(collection(db, collectionName), ...constraints);
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as T) }));
+// ─── COMICS ─────────────────────────────────────────
+
+/** Ambil semua komik (untuk admin). */
+export async function fetchComics(): Promise<Comic[]> {
+  const q = query(collection(db, "comics"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Comic);
 }
 
-/**
- * Tambah dokumen baru.
- */
-export async function addDocument<T extends DocumentData>(
-  collectionName: string,
-  data: T
-): Promise<DocumentReference> {
-  return addDoc(collection(db, collectionName), {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+/** Ambil komik yang sudah published (untuk publik). */
+export async function fetchPublishedComics(): Promise<Comic[]> {
+  const q = query(
+    collection(db, "comics"),
+    where("status", "==", "published"),
+    orderBy("createdAt", "desc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Comic);
 }
 
-/**
- * Update dokumen yang sudah ada.
- */
-export async function updateDocument<T extends DocumentData>(
-  collectionName: string,
-  docId: string,
-  data: Partial<T>
-): Promise<void> {
-  return updateDoc(doc(db, collectionName, docId), {
-    ...data,
-    updatedAt: serverTimestamp(),
-  });
+/** Ambil komik berdasarkan slug. */
+export async function fetchComicBySlug(
+  slug: string
+): Promise<Comic | null> {
+  const q = query(
+    collection(db, "comics"),
+    where("slug", "==", slug),
+    limit(1)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as Comic;
 }
 
-/**
- * Hapus dokumen.
- */
-export async function deleteDocument(
-  collectionName: string,
-  docId: string
-): Promise<void> {
-  return deleteDoc(doc(db, collectionName, docId));
+/** Ambil komik berdasarkan ID. */
+export async function fetchComicById(
+  id: string
+): Promise<Comic | null> {
+  const snap = await getDoc(doc(db, "comics", id));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() } as Comic;
 }
 
-// Re-export utilitas Firestore yang sering dipakai
-export { where, orderBy, limit, startAfter, serverTimestamp };
+// ─── CHAPTERS ───────────────────────────────────────
+
+/** Ambil semua chapter untuk sebuah komik (by comicId). */
+export async function fetchChaptersByComicId(
+  comicId: string
+): Promise<Chapter[]> {
+  const q = query(
+    collection(db, "comics", comicId, "chapters"),
+    orderBy("chapterNumber", "asc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Chapter);
+}
+
+/** Ambil chapter berdasarkan nomor chapter. */
+export async function fetchChapterByNumber(
+  comicId: string,
+  chapterNumber: number
+): Promise<Chapter | null> {
+  const q = query(
+    collection(db, "comics", comicId, "chapters"),
+    where("chapterNumber", "==", chapterNumber),
+    limit(1)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() } as Chapter;
+}
+
+/** Ambil chapter published saja. */
+export async function fetchPublishedChapters(
+  comicId: string
+): Promise<Chapter[]> {
+  const q = query(
+    collection(db, "comics", comicId, "chapters"),
+    where("isPublished", "==", true),
+    orderBy("chapterNumber", "asc")
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Chapter);
+}

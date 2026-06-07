@@ -1,32 +1,55 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, BookOpen, Star, Layers, X } from "lucide-react";
+import { Search, BookOpen, Star, Layers, X, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MOCK_COMICS, getCategoryById } from "@/lib/mock-data";
+import { fetchPublishedComics, fetchCategories } from "@/lib/firebase/firestore";
+import type { Comic, Category } from "@/types";
 
 export default function CariPage() {
   const [query, setQuery] = useState("");
+  const [comics, setComics] = useState<Comic[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchPublishedComics(), fetchCategories()])
+      .then(([comicsData, catsData]) => {
+        setComics(comicsData);
+        setCategories(catsData);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
 
   const results = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
-    return MOCK_COMICS.filter(
+    return comics.filter(
       (c) =>
         c.title.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q) ||
         c.tags.some((t) => t.includes(q))
     );
-  }, [query]);
+  }, [query, comics]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Search Header */}
       <div className="max-w-xl mx-auto text-center space-y-4">
         <h1 className="text-3xl font-bold tracking-tight">Cari Komik</h1>
         <div className="relative">
@@ -49,23 +72,13 @@ export default function CariPage() {
         </div>
       </div>
 
-      {/* Results */}
       {!query.trim() ? (
         <div className="text-center py-16">
           <Search className="h-16 w-16 mx-auto text-muted-foreground/20 mb-4" />
-          <p className="text-muted-foreground">
-            Mulai ketik untuk mencari komik...
-          </p>
-          {/* Quick suggestions */}
+          <p className="text-muted-foreground">Mulai ketik untuk mencari komik...</p>
           <div className="flex flex-wrap justify-center gap-2 mt-4">
             {["akidah", "fikih", "sahabat", "quran", "sejarah"].map((tag) => (
-              <Button
-                key={tag}
-                variant="outline"
-                size="sm"
-                onClick={() => setQuery(tag)}
-                className="text-xs"
-              >
+              <Button key={tag} variant="outline" size="sm" onClick={() => setQuery(tag)} className="text-xs">
                 #{tag}
               </Button>
             ))}
@@ -74,15 +87,8 @@ export default function CariPage() {
       ) : results.length === 0 ? (
         <div className="text-center py-16">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground">
-            Tidak ditemukan komik untuk &quot;{query}&quot;
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => setQuery("")}
-          >
+          <p className="text-muted-foreground">Tidak ditemukan komik untuk &quot;{query}&quot;</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => setQuery("")}>
             Hapus pencarian
           </Button>
         </div>
@@ -91,38 +97,26 @@ export default function CariPage() {
           <p className="text-sm text-muted-foreground">
             {results.length} hasil untuk &quot;{query}&quot;
           </p>
-
           {results.map((comic) => {
             const category = getCategoryById(comic.categoryId);
             return (
               <Link key={comic.id} href={`/komik/${comic.slug}`}>
                 <Card className="hover:shadow-md transition-shadow group">
                   <CardContent className="p-4 flex gap-4">
-                    {/* Cover */}
                     <div className="relative w-16 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                       {comic.coverUrl ? (
-                        <Image
-                          src={comic.coverUrl}
-                          alt={comic.title}
-                          fill
-                          className="object-cover"
-                          sizes="64px"
-                        />
+                        <Image src={comic.coverUrl} alt={comic.title} fill className="object-cover" sizes="64px" />
                       ) : (
                         <div className="flex h-full items-center justify-center">
                           <BookOpen className="h-5 w-5 text-muted-foreground/40" />
                         </div>
                       )}
                     </div>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0 space-y-1.5">
                       <h3 className="font-semibold group-hover:text-primary transition-colors line-clamp-1">
                         {comic.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {comic.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{comic.description}</p>
                       <div className="flex items-center gap-2 flex-wrap">
                         {category && (
                           <Badge variant="outline" className="text-[10px]">

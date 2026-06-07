@@ -1,17 +1,12 @@
-import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
+import { COMIC_SLUGS, PUBLISHED_CHAPTERS } from "@/lib/static-params";
 import KomikChapterRedirect from "./client-page";
 
 export function generateStaticParams() {
   const params: { slug: string; chapterId: string }[] = [];
-  for (const comic of MOCK_COMICS) {
-    const chapters = MOCK_CHAPTERS[comic.slug] || [];
-    for (const ch of chapters) {
-      if (ch.isPublished) {
-        params.push({
-          slug: comic.slug,
-          chapterId: String(ch.chapterNumber),
-        });
-      }
+  for (const slug of COMIC_SLUGS) {
+    const chapters = PUBLISHED_CHAPTERS[slug] || [];
+    for (const chNum of chapters) {
+      params.push({ slug, chapterId: String(chNum) });
     }
   }
   return params;

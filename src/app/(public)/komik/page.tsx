@@ -1,35 +1,55 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { BookOpen, Star, Layers, Filter } from "lucide-react";
+import { BookOpen, Star, Layers, Filter, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MOCK_COMICS, MOCK_CATEGORIES, getCategoryById } from "@/lib/mock-data";
+import { fetchPublishedComics, fetchCategories } from "@/lib/firebase/firestore";
+import type { Comic, Category } from "@/types";
 
 export default function KatalogKomikPage() {
   const [activeCategory, setActiveCategory] = useState("semua");
+  const [comics, setComics] = useState<Comic[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchPublishedComics(), fetchCategories()])
+      .then(([comicsData, catsData]) => {
+        setComics(comicsData);
+        setCategories(catsData);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredComics = useMemo(() => {
-    if (activeCategory === "semua") return MOCK_COMICS;
-    const cat = MOCK_CATEGORIES.find((c) => c.slug === activeCategory);
-    if (!cat) return MOCK_COMICS;
-    return MOCK_COMICS.filter((c) => c.categoryId === cat.id);
-  }, [activeCategory]);
+    if (activeCategory === "semua") return comics;
+    const cat = categories.find((c) => c.slug === activeCategory);
+    if (!cat) return comics;
+    return comics.filter((c) => c.categoryId === cat.id);
+  }, [activeCategory, comics, categories]);
+
+  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Jelajahi Komik</h1>
-        <p className="text-muted-foreground mt-1">
-          Temukan komik PAI yang sesuai minatmu
-        </p>
+        <p className="text-muted-foreground mt-1">Temukan komik PAI yang sesuai minatmu</p>
       </div>
 
-      {/* Category Filter */}
       <div className="flex flex-wrap gap-2">
         <Button
           variant={activeCategory === "semua" ? "default" : "outline"}
@@ -40,7 +60,7 @@ export default function KatalogKomikPage() {
           <Filter className="h-3.5 w-3.5" />
           Semua
         </Button>
-        {MOCK_CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <Button
             key={cat.id}
             variant={activeCategory === cat.slug ? "default" : "outline"}
@@ -52,15 +72,13 @@ export default function KatalogKomikPage() {
         ))}
       </div>
 
-      {/* Results Count */}
       <p className="text-sm text-muted-foreground">
         Menampilkan {filteredComics.length} komik
         {activeCategory !== "semua" && (
-          <> dalam kategori <strong>{MOCK_CATEGORIES.find((c) => c.slug === activeCategory)?.name}</strong></>
+          <> dalam kategori <strong>{categories.find((c) => c.slug === activeCategory)?.name}</strong></>
         )}
       </p>
 
-      {/* Comic Grid */}
       {filteredComics.length === 0 ? (
         <div className="text-center py-20">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
@@ -73,7 +91,6 @@ export default function KatalogKomikPage() {
             return (
               <Link key={comic.id} href={`/komik/${comic.slug}`} className="group">
                 <Card className="overflow-hidden border-0 shadow-sm hover:shadow-lg transition-all duration-300 group-hover:-translate-y-1">
-                  {/* Cover */}
                   <div className="relative aspect-[2/3] bg-muted overflow-hidden">
                     {comic.coverUrl ? (
                       <Image
@@ -88,8 +105,6 @@ export default function KatalogKomikPage() {
                         <BookOpen className="h-8 w-8 text-muted-foreground/40" />
                       </div>
                     )}
-
-                    {/* Category badge */}
                     {category && (
                       <div className="absolute top-2 left-2">
                         <Badge className="text-[10px] bg-background/80 backdrop-blur-sm text-foreground border-0">
@@ -98,8 +113,6 @@ export default function KatalogKomikPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Info */}
                   <CardContent className="p-3 space-y-1">
                     <h3 className="text-sm font-semibold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
                       {comic.title}
