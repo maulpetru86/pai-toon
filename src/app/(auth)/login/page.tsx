@@ -36,13 +36,24 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/");
     } catch (err: unknown) {
+      const errorCode = (err as { code?: string }).code || "";
       const msg = err instanceof Error ? err.message : "Login gagal";
-      if (msg.includes("user-not-found") || msg.includes("wrong-password") || msg.includes("invalid-credential")) {
+      console.error("Login error:", errorCode, msg);
+
+      if (errorCode === "auth/user-not-found" || errorCode === "auth/wrong-password" || errorCode === "auth/invalid-credential") {
         setError("Email atau password salah.");
-      } else if (msg.includes("too-many-requests")) {
+      } else if (errorCode === "auth/too-many-requests") {
         setError("Terlalu banyak percobaan. Coba lagi nanti.");
+      } else if (errorCode === "auth/invalid-email") {
+        setError("Format email tidak valid.");
+      } else if (errorCode === "auth/user-disabled") {
+        setError("Akun ini telah dinonaktifkan.");
+      } else if (errorCode === "auth/network-request-failed") {
+        setError("Koneksi gagal. Periksa internet Anda.");
+      } else if (errorCode === "auth/configuration-not-found") {
+        setError("Konfigurasi login belum diatur. Hubungi admin.");
       } else {
-        setError("Terjadi kesalahan. Silakan coba lagi.");
+        setError(`Terjadi kesalahan (${errorCode || "unknown"}). Silakan coba lagi.`);
       }
     } finally {
       setLoading(false);
