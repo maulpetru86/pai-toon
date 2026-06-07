@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -22,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { MOCK_COMICS, MOCK_CHAPTERS } from "@/lib/mock-data";
 import { uploadFile } from "@/lib/firebase/storage";
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Chapter } from "@/types";
 
@@ -191,6 +190,9 @@ export default function AdminEditChapterPage() {
     try {
       const comicSlug = comic?.slug || params.id;
 
+      // Track uploaded URLs separately to avoid stale closure issues
+      const uploadedUrls = new Map<string, string>();
+
       // Upload new files
       for (const page of pageFiles) {
         if (page.status === "pending" && page.file) {
@@ -200,8 +202,9 @@ export default function AdminEditChapterPage() {
             )
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const path = `comics/${comicSlug}/ch${chapterNumber}/page_${Date.now()}.${ext}`;
+          const path = `comics/${comicSlug}/ch${chapterNumber}/page_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
           const result = await uploadFile(path, page.file);
+          uploadedUrls.set(page.id, result.url);
           setPageFiles((prev) =>
             prev.map((p) =>
               p.id === page.id
@@ -212,29 +215,16 @@ export default function AdminEditChapterPage() {
         }
       }
 
-      // Collect all page URLs (existing + newly uploaded)
-      // We need to get the latest state of pageFiles after uploads
-      // Use a ref-like approach by building the array from current state
-      const finalPages: string[] = [];
-      for (const page of pageFiles) {
-        if (page.url) {
-          finalPages.push(page.url);
-        }
-      }
+      // Collect all page URLs in order: existing URLs + newly uploaded URLs
+      const allPageUrls: string[] = pageFiles
+        .map((page) => {
+          if (page.url) return page.url; // Existing page
+          return uploadedUrls.get(page.id) || null; // Newly uploaded page
+        })
+        .filter((url): url is string => !!url);
 
-      // But we also need the newly uploaded URLs that were set via setPageFiles
-      // So let's collect them differently:
-      const allPageUrls: string[] = await new Promise((resolve) => {
-        setPageFiles((currentFiles) => {
-          const urls = currentFiles
-            .map((p) => p.url)
-            .filter((url): url is string => !!url);
-          resolve(urls);
-          return currentFiles; // Don't change state
-        });
-      });
-
-      // Update Firestore document
+      // Use setDoc with merge so it works for both existing and new documents
+      // (updateDoc fails if the document doesn't exist, e.g. mock-data chapters)
       const chapterRef = doc(
         db,
         "comics",
@@ -243,13 +233,14 @@ export default function AdminEditChapterPage() {
         params.chapterId
       );
 
-      await updateDoc(chapterRef, {
+      await setDoc(chapterRef, {
         title: title.trim(),
+        chapterNumber,
         isPublished,
         pages: allPageUrls,
         publishedAt: isPublished ? serverTimestamp() : null,
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
 
       router.push(`/admin/komik/${params.id}/chapter`);
     } catch (error) {
@@ -378,7 +369,8 @@ export default function AdminEditChapterPage() {
                   </div>
 
                   <div className="relative h-12 w-9 rounded overflow-hidden bg-muted flex-shrink-0">
-                    <Image src={page.preview} alt={`Page ${index + 1}`} fill className="object-cover" sizes="36px" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={page.preview} alt={`Page ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
 
                   <div className="flex-1 min-w-0">
