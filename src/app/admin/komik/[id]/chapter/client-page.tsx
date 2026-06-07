@@ -44,12 +44,18 @@ export default function AdminChapterPage() {
           ...d.data(),
         })) as Chapter[];
 
-        // Jika Firestore kosong, gunakan mock-data sebagai fallback
-        if (chaptersData.length > 0) {
-          setChapters(chaptersData);
-        } else if (comic) {
+        // Merge: Firestore chapters take priority, mock chapters fill in the gaps
+        if (comic) {
           const mockChapters = MOCK_CHAPTERS[comic.slug] || [];
-          setChapters(mockChapters);
+          const firestoreIds = new Set(chaptersData.map((c) => c.id));
+          // Add mock chapters that are NOT yet in Firestore
+          const mockOnly = mockChapters.filter((mc) => !firestoreIds.has(mc.id));
+          const merged = [...chaptersData, ...mockOnly].sort(
+            (a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0)
+          );
+          setChapters(merged);
+        } else {
+          setChapters(chaptersData);
         }
       } catch (error) {
         console.error("Failed to fetch chapters from Firestore, using mock data:", error);
