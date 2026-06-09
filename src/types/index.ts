@@ -43,6 +43,7 @@ export interface User {
   totalComicsRead: number;
   xp: number;
   level: number;
+  readChapters?: string[];
 
   createdAt: Timestamp;
   updatedAt: Timestamp;

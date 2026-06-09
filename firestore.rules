@@ -44,14 +44,18 @@ service cloud.firestore {
     // Authenticated user bisa baca semua (termasuk draft, untuk admin preview).
     // Hanya admin yang bisa tulis.
     match /comics/{comicId} {
-      allow read: if resource.data.status == 'published' || isAdmin();
+      // Single doc read: publik bisa baca jika published, admin bisa baca semua
+      allow get: if resource.data.status == 'published' || isAdmin();
+      // List/query: publik bisa list komik (konten komik bersifat publik)
+      allow list: if true;
       allow write: if isAdmin();
 
       // ─── SUB-KOLEKSI: chapters ───────────────────────
       // Publik bisa baca chapter yang sudah published.
       // Hanya admin yang bisa tulis.
       match /chapters/{chapterId} {
-        allow read: if resource.data.isPublished == true || isAdmin();
+        allow get: if resource.data.isPublished == true || isAdmin();
+        allow list: if true;
         allow write: if isAdmin();
       }
     }

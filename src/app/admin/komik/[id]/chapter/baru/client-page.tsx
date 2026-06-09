@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileImage,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,13 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { fetchComicById } from "@/lib/firebase/firestore";
 import { uploadFile } from "@/lib/firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -328,6 +336,33 @@ export default function AdminChapterBaruPage() {
             )}
           </div>
           <div className="flex gap-3">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" className="gap-2" disabled={pageFiles.length === 0}>
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col h-[85vh]">
+                <DialogHeader className="p-4 pb-2 border-b">
+                  <DialogTitle>Preview Chapter</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto bg-black p-0">
+                  <div className="w-full max-w-sm mx-auto flex flex-col">
+                    {pageFiles.map((page, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img 
+                        key={page.id} 
+                        src={page.preview} 
+                        alt={`Preview page ${i+1}`} 
+                        className="w-full h-auto block m-0 p-0" 
+                      />
+                    ))}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <Link href={`/admin/komik/${comicId}/chapter`}>
               <Button type="button" variant="outline" disabled={saving}>Batal</Button>
             </Link>

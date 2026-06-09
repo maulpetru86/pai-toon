@@ -10,10 +10,10 @@
 export const COMIC_SLUGS = [
   "iman-kepada-allah",
   "shalat-tiang-agama",
-  "indahnya-sedekah",
-  "kisah-sahabat-nabi",
-  "adab-bermedia-sosial",
-  "puasa-ramadhan",
+  "akhlak-mulia",
+  "peradaban-andalusia",
+  "mengenal-alquran",
+  "zakat-sedekah",
 ];
 
 export const COMIC_IDS = [
@@ -27,20 +27,20 @@ export const COMIC_IDS = [
 
 /** Map comicSlug → array of published chapter numbers */
 export const PUBLISHED_CHAPTERS: Record<string, number[]> = {
-  "iman-kepada-allah": [1, 2, 3, 4],
-  "shalat-tiang-agama": [1, 2, 3, 4],
-  "indahnya-sedekah": [1, 2, 3, 4, 5],
-  "kisah-sahabat-nabi": [1, 2, 3, 4, 5],
-  "adab-bermedia-sosial": [1, 2, 3],
-  "puasa-ramadhan": [1, 2, 3, 4, 5],
+  "iman-kepada-allah": [1, 2, 3, 4, 5],
+  "shalat-tiang-agama": [1, 2, 3, 4, 5],
+  "akhlak-mulia": [1, 2, 3],
+  "peradaban-andalusia": [1, 2, 3],
+  "mengenal-alquran": [1, 2, 3],
+  "zakat-sedekah": [1, 2, 3],
 };
 
 /** Map comicId → array of chapter IDs */
 export const CHAPTER_IDS: Record<string, string[]> = {
-  "comic-1": ["ch-1-1", "ch-1-2", "ch-1-3", "ch-1-4", "ch-1-5"],
-  "comic-2": ["ch-2-1", "ch-2-2", "ch-2-3", "ch-2-4", "ch-2-5"],
-  "comic-3": ["ch-3-1", "ch-3-2", "ch-3-3", "ch-3-4", "ch-3-5"],
-  "comic-4": ["ch-4-1", "ch-4-2", "ch-4-3", "ch-4-4", "ch-4-5"],
-  "comic-5": ["ch-5-1", "ch-5-2", "ch-5-3", "ch-5-4", "ch-5-5"],
-  "comic-6": ["ch-6-1", "ch-6-2", "ch-6-3", "ch-6-4", "ch-6-5"],
+  "comic-1": ["ch-1", "ch-2", "ch-3", "ch-4", "ch-5"],
+  "comic-2": ["shalat-ch-1", "shalat-ch-2", "shalat-ch-3", "shalat-ch-4", "shalat-ch-5"],
+  "comic-3": ["akhlak-ch-1", "akhlak-ch-2", "akhlak-ch-3", "akhlak-ch-4", "akhlak-ch-5"],
+  "comic-4": ["andalusia-ch-1", "andalusia-ch-2", "andalusia-ch-3", "andalusia-ch-4"],
+  "comic-5": ["quran-ch-1", "quran-ch-2", "quran-ch-3", "quran-ch-4"],
+  "comic-6": ["zakat-ch-1", "zakat-ch-2", "zakat-ch-3"],
 };

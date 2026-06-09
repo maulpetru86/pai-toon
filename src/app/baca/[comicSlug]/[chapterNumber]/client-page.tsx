@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ReaderCTA } from "@/components/komik/reader-cta";
 import { fetchComicBySlug, fetchChapterByNumber, fetchChaptersByComicId } from "@/lib/firebase/firestore";
 import type { Comic, Chapter } from "@/types";
+import { useGamification } from "@/hooks/use-gamification";
 
 export default function ReaderPage() {
   const params = useParams<{ comicSlug: string; chapterNumber: string }>();
@@ -27,6 +28,8 @@ export default function ReaderPage() {
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [allChapters, setAllChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { awardXpForReading } = useGamification();
 
   const [loadedImages, setLoadedImages] = useState<Set<number>>(new Set());
   const [showTopBar, setShowTopBar] = useState(true);
@@ -54,6 +57,15 @@ export default function ReaderPage() {
     }
     load();
   }, [comicSlug, chapterNum]);
+
+  useEffect(() => {
+    if (comic && chapter) {
+      const timer = setTimeout(() => {
+        awardXpForReading(comic.id, chapter.id);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [comic, chapter, awardXpForReading]);
 
   const handleScroll = useCallback(() => {
     const currentY = window.scrollY;
