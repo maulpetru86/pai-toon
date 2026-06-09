@@ -376,11 +376,9 @@ export default function AdminEditChapterPage() {
 
         <div className="flex justify-end gap-3">
           <Dialog>
-            <DialogTrigger asChild>
-              <Button type="button" variant="outline" className="gap-2" disabled={pageFiles.length === 0}>
-                <Eye className="h-4 w-4" />
-                Preview
-              </Button>
+            <DialogTrigger render={<Button type="button" variant="outline" className="gap-2" disabled={pageFiles.length === 0} />}>
+              <Eye className="h-4 w-4" />
+              Preview
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col h-[85vh]">
               <DialogHeader className="p-4 pb-2 border-b">
