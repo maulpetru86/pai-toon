@@ -48,15 +48,16 @@ jobs:
           NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-QKTFFYEHRZ
           EOF
 
-      # 5. Build Next.js (static export → folder out/)
+      # 5. Build Next.js
       - name: Build application
         run: npm run build
 
-      # 6. Deploy ke Firebase Hosting
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      # 6. Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PAI_TOON }}
-          channelId: live
-          projectId: pai-toon
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PAI_TOON }}
+
+      # 7. Deploy to Firebase
+      - name: Deploy to Firebase
+        run: npx firebase-tools deploy --project pai-toon --force
