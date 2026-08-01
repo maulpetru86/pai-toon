@@ -58,8 +58,8 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PAI_TOON }}
 
-      # 7. Deploy to Firebase
-      - name: Deploy to Firebase
+      # 7. Deploy to Firebase Hosting only
+      - name: Deploy to Firebase Hosting
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
-        run: npx firebase-tools deploy --project pai-toon --force
+        run: npx firebase-tools deploy --project pai-toon --only hosting --force
