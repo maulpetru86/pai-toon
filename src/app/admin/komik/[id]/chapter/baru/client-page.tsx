@@ -32,7 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { fetchComicById } from "@/lib/firebase/firestore";
-import { uploadFile } from "@/lib/firebase/storage";
+import { uploadToDrive } from "@/lib/drive/upload";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Comic } from "@/types";
@@ -45,6 +45,19 @@ interface PageFile {
   progress: number;
   url?: string;
   error?: string;
+}
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function validatePageFile(file: File) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return "Hanya format JPG, PNG, WEBP yang diperbolehkan.";
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    return `Ukuran file terlalu besar (${(file.size / 1024 / 1024).toFixed(1)} MB). Maksimal 5 MB.`;
+  }
+  return null;
 }
 
 export default function AdminChapterBaruPage() {
@@ -74,10 +87,19 @@ export default function AdminChapterBaruPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
-      const imageFiles = files.filter((f) => f.type.startsWith("image/"));
-      if (imageFiles.length !== files.length) {
-        alert("Beberapa file bukan gambar dan dilewati.");
+
+      const invalidFiles = files.filter((file) => validatePageFile(file) !== null);
+      if (invalidFiles.length) {
+        alert(
+          `Beberapa file tidak valid:\n${invalidFiles
+            .map((file) => `- ${file.name}: ${validatePageFile(file)}`)
+            .join("\n")}`
+        );
       }
+
+      const imageFiles = files.filter((file) => validatePageFile(file) === null);
+      if (!imageFiles.length) return;
+
       imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
       const newPages: PageFile[] = imageFiles.map((file) => ({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -113,9 +135,22 @@ export default function AdminChapterBaruPage() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    const newPages: PageFile[] = files.map((file) => ({
+    const files = Array.from(e.dataTransfer.files);
+
+    const invalidFiles = files.filter((file) => validatePageFile(file) !== null);
+    if (invalidFiles.length) {
+      alert(
+        `Beberapa file tidak valid:\n${invalidFiles
+          .map((file) => `- ${file.name}: ${validatePageFile(file)}`)
+          .join("\n")}`
+      );
+    }
+
+    const imageFiles = files.filter((file) => validatePageFile(file) === null);
+    if (!imageFiles.length) return;
+
+    imageFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    const newPages: PageFile[] = imageFiles.map((file) => ({
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       file,
       preview: URL.createObjectURL(file),
@@ -148,13 +183,17 @@ export default function AdminChapterBaruPage() {
             prev.map((p) => p.id === page.id ? { ...p, status: "uploading" as const, progress: 30 } : p)
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const path = `comics/${comicSlug}/ch${chapterNumber}/page_${String(index + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
-          const result = await uploadFile(path, page.file);
-          pageUrls[index] = result.url;
+          const fileName = `page_${String(index + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
+          const result = await uploadToDrive(page.file, fileName);
+          pageUrls[index] = result.publicUrl;
           uploaded++;
           setOverallProgress(Math.round((uploaded / totalFiles) * 80));
           setPageFiles((prev) =>
-            prev.map((p) => p.id === page.id ? { ...p, status: "done" as const, progress: 100, url: result.url } : p)
+            prev.map((p) =>
+              p.id === page.id
+                ? { ...p, status: "done" as const, progress: 100, url: result.publicUrl }
+                : p
+            )
           );
         } catch (err) {
           setPageFiles((prev) =>
@@ -296,7 +335,22 @@ export default function AdminChapterBaruPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{page.file.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{(page.file.size / 1024).toFixed(0)} KB</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {(page.file.size / 1024).toFixed(0)} KB • {page.status === "done" ? "Uploaded" : page.status === "uploading" ? "Uploading" : page.status === "pending" ? "Menunggu" : "Gagal"}
+                      </p>
+                      {page.url && (
+                        <p className="text-[10px] truncate text-blue-600 hover:text-blue-800">
+                          <a href={page.url} target="_blank" rel="noreferrer">
+                            {page.url}
+                          </a>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                      <div className="text-[10px] text-muted-foreground">{page.progress}%</div>
+                      <div className="h-1.5 w-20 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${page.progress}%` }} />
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       {page.status === "pending" && (<Badge variant="outline" className="text-[10px]">Menunggu</Badge>)}

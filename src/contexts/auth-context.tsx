@@ -9,7 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { type User as FirebaseUser } from "firebase/auth";
+import {
+  type User as FirebaseUser,
+  getIdTokenResult,
+} from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { db } from "@/lib/firebase/config";
@@ -117,6 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setFirebaseUser(fbUser);
 
       if (fbUser) {
+        try {
+          await getIdTokenResult(fbUser, true);
+        } catch (tokenError) {
+          console.warn("Gagal refresh token auth:", tokenError);
+        }
         const profile = await fetchOrCreateProfile(fbUser);
         setUserProfile(profile);
       } else {

@@ -29,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+firebase-debug.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -44,4 +45,9 @@ next-env.d.ts
 .firebase/
 deploy-debug.log
 
+# local service account and temporary work files
+serviceAccountKey.json
+.gitdiff.tmp.txt
+
 .vercel
+APLIKASI KOMIK PAI - READY DEPLOY.zip

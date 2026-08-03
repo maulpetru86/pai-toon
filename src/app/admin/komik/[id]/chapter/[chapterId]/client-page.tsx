@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { fetchComicById } from "@/lib/firebase/firestore";
-import { uploadFile } from "@/lib/firebase/storage";
+import { uploadToDrive } from "@/lib/drive/upload";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Chapter, Comic } from "@/types";
@@ -38,7 +38,21 @@ interface PageFile {
   file?: File;
   preview: string;
   status: "existing" | "pending" | "uploading" | "done" | "error";
+  progress: number;
   url?: string;
+}
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function validatePageFile(file: File) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return "Hanya format JPG, PNG, WEBP yang diperbolehkan.";
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    return `Ukuran file terlalu besar (${(file.size / 1024 / 1024).toFixed(1)} MB). Maksimal 5 MB.`;
+  }
+  return null;
 }
 
 export default function AdminEditChapterPage() {
@@ -75,6 +89,7 @@ export default function AdminEditChapterPage() {
               preview: url,
               url,
               status: "existing" as const,
+              progress: 100,
             })
           );
           setPageFiles(existingPages);
@@ -93,17 +108,25 @@ export default function AdminEditChapterPage() {
 
   const handleFilesSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []).filter((f) =>
-        f.type.startsWith("image/")
-      );
-      files.sort((a, b) =>
+      const files = Array.from(e.target.files || []);
+      const invalidFiles = files.filter((file) => validatePageFile(file) !== null);
+      if (invalidFiles.length) {
+        alert(
+          `Beberapa file tidak valid:\n${invalidFiles
+            .map((file) => `- ${file.name}: ${validatePageFile(file)}`)
+            .join("\n")}`
+        );
+      }
+      const validFiles = files.filter((file) => validatePageFile(file) === null);
+      validFiles.sort((a, b) =>
         a.name.localeCompare(b.name, undefined, { numeric: true })
       );
-      const newPages: PageFile[] = files.map((file) => ({
+      const newPages: PageFile[] = validFiles.map((file) => ({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         file,
         preview: URL.createObjectURL(file),
         status: "pending" as const,
+        progress: 0,
       }));
       setPageFiles((prev) => [...prev, ...newPages]);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -129,29 +152,38 @@ export default function AdminEditChapterPage() {
     });
   };
 
+  const [overallProgress, setOverallProgress] = useState(0);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return alert("Judul chapter wajib diisi.");
     setSaving(true);
+    setOverallProgress(0);
     try {
       const comicSlug = comic?.slug || params.id;
       const uploadedUrls = new Map<string, string>();
+      const totalPages = pageFiles.length;
+      let uploaded = 0;
 
       for (const page of pageFiles) {
         if (page.status === "pending" && page.file) {
           setPageFiles((prev) =>
             prev.map((p) =>
-              p.id === page.id ? { ...p, status: "uploading" as const } : p
+              p.id === page.id
+                ? { ...p, status: "uploading" as const, progress: 20 }
+                : p
             )
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const path = `comics/${comicSlug}/ch${chapterNumber}/page_${Date.now()}_${Math.random().toString(36).slice(2, 6)}.${ext}`;
-          const result = await uploadFile(path, page.file);
-          uploadedUrls.set(page.id, result.url);
+          const fileName = `page_${String(uploaded + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
+          const result = await uploadToDrive(page.file, fileName);
+          uploadedUrls.set(page.id, result.publicUrl);
+          uploaded += 1;
+          setOverallProgress(Math.round((uploaded / totalPages) * 100));
           setPageFiles((prev) =>
             prev.map((p) =>
               p.id === page.id
-                ? { ...p, status: "done" as const, url: result.url }
+                ? { ...p, status: "done" as const, url: result.publicUrl, progress: 100 }
                 : p
             )
           );
@@ -373,6 +405,18 @@ export default function AdminEditChapterPage() {
         </Card>
 
         <Separator />
+
+        {saving && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Uploading halaman...</span>
+              <span>{overallProgress}%</span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${overallProgress}%` }} />
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-end gap-3">
           <Dialog>

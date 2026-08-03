@@ -13,6 +13,7 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
+import { FeaturedCarousel } from "@/components/komik/featured-carousel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -135,6 +136,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ════════ FEATURED CAROUSEL ════════ */}
+      <FeaturedCarousel comics={comics.slice(0, 12)} />
 
       {/* ════════ SEARCH BAR ════════ */}
       <section className="container mx-auto px-4 -mt-6 relative z-10">

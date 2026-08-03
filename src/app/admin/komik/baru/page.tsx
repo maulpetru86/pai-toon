@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchCategories } from "@/lib/firebase/firestore";
-import { uploadFile } from "@/lib/firebase/storage";
+import { uploadToDrive } from "@/lib/drive/upload";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Link from "next/link";
@@ -103,9 +103,8 @@ export default function AdminKomikBaruPage() {
       let coverUrl = "";
       if (coverFile) {
         setUploadProgress(20);
-        const path = `comics/${slug}/cover_${Date.now()}.${coverFile.name.split(".").pop()}`;
-        const result = await uploadFile(path, coverFile);
-        coverUrl = result.url;
+        const result = await uploadToDrive(coverFile, `${slug}-cover.${coverFile.name.split(".").pop()}`);
+        coverUrl = result.webViewLink || result.publicUrl || "";
         setUploadProgress(60);
       }
 
@@ -134,8 +133,11 @@ export default function AdminKomikBaruPage() {
       setUploadProgress(100);
       router.push("/admin/komik");
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error("Gagal menyimpan komik:", error);
-      alert("Gagal menyimpan komik. Silakan coba lagi.");
+      alert(
+        `Gagal menyimpan komik. Periksa koneksi, hak akses admin, dan ukuran file.\n${message}`
+      );
     } finally {
       setSaving(false);
     }

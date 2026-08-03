@@ -137,21 +137,33 @@ export default function AdminChapterPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{chapter.title}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <ImagePlus className="h-3 w-3" />
-                      {chapter.pages.length} halaman
-                    </span>
-                    {chapter.isPublished ? (
-                      <Badge variant="default" className="text-[10px] h-4 gap-0.5">
-                        <Eye className="h-2.5 w-2.5" />
-                        Terbit
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px] h-4 gap-0.5">
-                        <EyeOff className="h-2.5 w-2.5" />
-                        Draft
-                      </Badge>
+                    <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1">
+                          <ImagePlus className="h-3 w-3" />
+                          {chapter.pages.length} halaman
+                        </span>
+                        {chapter.isPublished ? (
+                          <Badge variant="default" className="text-[10px] h-4 gap-0.5">
+                            <Eye className="h-2.5 w-2.5" />
+                            Terbit
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] h-4 gap-0.5">
+                            <EyeOff className="h-2.5 w-2.5" />
+                            Draft
+                          </Badge>
+                        )}
+                      </div>
+                      {chapter.pages.length > 0 && (
+                        <a
+                          href={chapter.pages[0]}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[11px] text-primary hover:underline"
+                        >
+                          Lihat halaman pertama di Drive
+                        </a>
                     )}
                   </div>
                 </div>
