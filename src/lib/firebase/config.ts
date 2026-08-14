@@ -4,7 +4,6 @@ import {
   getAuth,
   browserLocalPersistence,
   browserPopupRedirectResolver,
-  inMemoryPersistence,
   type Auth,
 } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
@@ -20,26 +19,29 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Inisialisasi Firebase (singleton pattern — hindari duplikasi saat HMR)
-let app: FirebaseApp;
-let auth: Auth;
+// Initialize only on the client — avoid initializing Firebase client SDK during SSR/build
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: any = null;
+let storage: any = null;
 
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  // Gunakan initializeAuth dengan browserLocalPersistence agar sesi
-  // tetap tersimpan di IndexedDB dan tidak hilang saat tab ditutup.
-  // Di environment SSR/build, gunakan inMemoryPersistence sebagai fallback.
-  const isServer = typeof window === "undefined";
-  auth = initializeAuth(app, {
-    persistence: isServer ? inMemoryPersistence : browserLocalPersistence,
-    ...(!isServer && { popupRedirectResolver: browserPopupRedirectResolver }),
-  });
-} else {
-  app = getApp();
-  auth = getAuth(app);
+const isServer = typeof window === "undefined";
+
+if (!isServer) {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+    // Use browser persistence in client environment
+    auth = initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } else {
+    app = getApp();
+    auth = getAuth(app);
+  }
+
+  db = getFirestore(app!);
+  storage = getStorage(app!);
 }
-
-const db: Firestore = getFirestore(app);
-const storage: FirebaseStorage = getStorage(app);
 
 export { app, auth, db, storage };

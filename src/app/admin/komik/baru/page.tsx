@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { fetchCategories } from "@/lib/firebase/firestore";
-import { uploadToDrive } from "@/lib/drive/upload";
+import { uploadFile, uploadFileWithProgress } from "@/lib/firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Link from "next/link";
@@ -102,10 +102,21 @@ export default function AdminKomikBaruPage() {
     try {
       let coverUrl = "";
       if (coverFile) {
-        setUploadProgress(20);
-        const result = await uploadToDrive(coverFile, `${slug}-cover.${coverFile.name.split(".").pop()}`);
-        coverUrl = result.webViewLink || result.publicUrl || "";
-        setUploadProgress(60);
+        setUploadProgress(5);
+        const fileName = `comics/${slug}/cover_${Date.now()}.${coverFile.name.split(".").pop()}`;
+        const task = uploadFileWithProgress(fileName, coverFile);
+        task.on("state_changed", (snapshot) => {
+          const pct = Math.round((snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100);
+          setUploadProgress(Math.round(pct * 0.8)); // map to 0-80
+        }, (err) => {
+          console.error("Cover upload failed:", err);
+        }, async () => {
+          const url = await (await import("@/lib/firebase/storage")).getFileURL(fileName);
+          coverUrl = url;
+          setUploadProgress(90);
+        });
+        // wait for completion
+        await new Promise<void>((resolve, reject) => task.on("state_changed", () => {}, (err) => reject(err), () => resolve()));
       }
 
       const tags = tagsInput

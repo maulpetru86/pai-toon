@@ -28,7 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { fetchComicById } from "@/lib/firebase/firestore";
-import { uploadToDrive } from "@/lib/drive/upload";
+import { uploadFile, uploadFileWithProgress, saveChapterPagesToFirestore } from "@/lib/firebase/storage";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Chapter, Comic } from "@/types";
@@ -175,15 +175,23 @@ export default function AdminEditChapterPage() {
             )
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const fileName = `page_${String(uploaded + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
-          const result = await uploadToDrive(page.file, fileName);
-          uploadedUrls.set(page.id, result.publicUrl);
+          const fileName = `comics/${params.id}/chapters/${params.chapterId}/page_${String(uploaded + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
+          // Upload with progress
+          const task = uploadFileWithProgress(fileName, page.file);
+          task.on("state_changed", (snapshot) => {
+            const pct = Math.round((snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100);
+            setPageFiles((prev) => prev.map((p) => p.id === page.id ? { ...p, progress: pct, status: pct < 100 ? "uploading" as const : "done" as const } : p));
+          });
+          // wait for completion or error
+          await new Promise<void>((resolve, reject) => task.on("state_changed", () => {}, (err) => reject(err), () => resolve()));
+          const url = await (await import("@/lib/firebase/storage")).getFileURL(fileName);
+          uploadedUrls.set(page.id, url);
           uploaded += 1;
           setOverallProgress(Math.round((uploaded / totalPages) * 100));
           setPageFiles((prev) =>
             prev.map((p) =>
               p.id === page.id
-                ? { ...p, status: "done" as const, url: result.publicUrl, progress: 100 }
+                ? { ...p, status: "done" as const, url, progress: 100 }
                 : p
             )
           );
@@ -210,6 +218,13 @@ export default function AdminEditChapterPage() {
         },
         { merge: true }
       );
+
+      // Save pages array via helper (same effect but centralized)
+      try {
+        await saveChapterPagesToFirestore(params.id, params.chapterId, allPageUrls);
+      } catch (err) {
+        console.warn("Failed to save pages via helper:", err);
+      }
 
       router.push(`/admin/komik/${params.id}/chapter`);
     } catch (error) {

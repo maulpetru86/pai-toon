@@ -6,33 +6,23 @@ export interface DriveUploadResult {
   publicUrl: string;
 }
 
+import { uploadFile } from "@/lib/firebase/storage";
+
 export async function uploadToDrive(
   file: File,
   fileName?: string,
   folderId?: string
 ): Promise<DriveUploadResult> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("fileName", fileName || file.name);
-  if (folderId) {
-    formData.append("folderId", folderId);
-  }
-
-  const response = await fetch("/api/drive-upload", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "Upload ke Google Drive gagal.");
-  }
-
+  const path = folderId ? `${folderId}/${fileName || file.name}` : (fileName || file.name);
+  const { url, result } = await uploadFile(path, file);
+  const ref: any = (result as any).ref || {};
+  const id = ref.fullPath || ref.name || path;
+  const name = ref.name || fileName || file.name;
   return {
-    id: data.id,
-    name: data.name,
-    mimeType: data.mimeType,
-    webViewLink: data.webViewLink,
-    publicUrl: data.webContentLink || data.webViewLink || "",
+    id,
+    name,
+    mimeType: file.type,
+    webViewLink: url,
+    publicUrl: url,
   } as DriveUploadResult;
 }

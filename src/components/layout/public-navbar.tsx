@@ -16,8 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/use-auth";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { signOut } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 
 const navLinks = [
@@ -36,7 +35,7 @@ export function PublicNavbar() {
 
   const handleLogout = async () => {
     setDropdownOpen(false);
-    await signOut(auth);
+    await signOut();
     router.push("/");
   };
 

@@ -32,7 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { fetchComicById } from "@/lib/firebase/firestore";
-import { uploadToDrive } from "@/lib/drive/upload";
+import { uploadFile, uploadFileWithProgress, saveChapterPagesToFirestore } from "@/lib/firebase/storage";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Comic } from "@/types";
@@ -183,15 +183,21 @@ export default function AdminChapterBaruPage() {
             prev.map((p) => p.id === page.id ? { ...p, status: "uploading" as const, progress: 30 } : p)
           );
           const ext = page.file.name.split(".").pop() || "jpg";
-          const fileName = `page_${String(index + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
-          const result = await uploadToDrive(page.file, fileName);
-          pageUrls[index] = result.publicUrl;
+          const fileName = `comics/${comicId}/chapters/${chapterNumber}/page_${String(index + 1).padStart(3, "0")}_${Date.now()}.${ext}`;
+          const task = uploadFileWithProgress(fileName, page.file);
+          task.on("state_changed", (snapshot) => {
+            const pct = Math.round((snapshot.bytesTransferred / (snapshot.totalBytes || 1)) * 100);
+            setPageFiles((prev) => prev.map((p) => p.id === page.id ? { ...p, progress: pct, status: pct < 100 ? "uploading" as const : "done" as const } : p));
+          });
+          await new Promise<void>((resolve, reject) => task.on("state_changed", () => {}, (err) => reject(err), () => resolve()));
+          const url = await (await import("@/lib/firebase/storage")).getFileURL(fileName);
+          pageUrls[index] = url;
           uploaded++;
           setOverallProgress(Math.round((uploaded / totalFiles) * 80));
           setPageFiles((prev) =>
             prev.map((p) =>
               p.id === page.id
-                ? { ...p, status: "done" as const, progress: 100, url: result.publicUrl }
+                ? { ...p, status: "done" as const, progress: 100, url }
                 : p
             )
           );
@@ -210,7 +216,7 @@ export default function AdminChapterBaruPage() {
       }
 
       setOverallProgress(90);
-      await addDoc(collection(db, "comics", comicId, "chapters"), {
+      const created = await addDoc(collection(db, "comics", comicId, "chapters"), {
         comicId,
         chapterNumber,
         title: title.trim(),
@@ -221,6 +227,14 @@ export default function AdminChapterBaruPage() {
         updatedAt: serverTimestamp(),
       });
       setOverallProgress(100);
+
+      // Save pages via helper (redundant but ensures consistent location)
+      try {
+        await saveChapterPagesToFirestore(comicId, created.id, pageUrls.filter(Boolean));
+      } catch (err) {
+        console.warn("Failed to save pages via helper after create:", err);
+      }
+
       router.push(`/admin/komik/${comicId}/chapter`);
     } catch (error) {
       console.error("Gagal menyimpan chapter:", error);

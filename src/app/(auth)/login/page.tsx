@@ -16,8 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { signInWithEmail, signInWithGoogle } from "@/lib/firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +32,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmail(email, password);
       router.push("/");
     } catch (err: unknown) {
       const errorCode = (err as { code?: string }).code || "";
@@ -64,8 +63,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle();
       router.push("/");
     } catch (err: unknown) {
       console.error("Google login error:", err);

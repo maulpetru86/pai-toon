@@ -25,8 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookmark } from "@/hooks/use-bookmark";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { signOut } from "@/lib/firebase/auth";
 
 // ─── Badge definitions ───
 const BADGE_DEFINITIONS = [
@@ -73,7 +72,7 @@ export default function ProfilPage() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut(auth);
+    await signOut();
     router.push("/");
   };
 

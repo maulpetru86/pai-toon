@@ -17,13 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  createUserWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { signUpWithEmail, signInWithGoogle } from "@/lib/firebase/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,8 +39,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(cred.user, { displayName: name });
+      await signUpWithEmail(email, password, name);
       router.push("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
@@ -68,8 +61,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      await signInWithGoogle();
       router.push("/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "";
