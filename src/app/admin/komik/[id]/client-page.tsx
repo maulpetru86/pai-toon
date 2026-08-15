@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { fetchComicById, fetchCategories } from "@/lib/firebase/firestore";
+import { uploadFileWithProgress, getFileURL } from "@/lib/firebase/storage";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import type { Comic, ComicStatus, Category } from "@/types";
@@ -93,6 +94,49 @@ export default function AdminEditKomikPage() {
       </div>
     );
   }
+
+  // cover upload state
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
+  const [newCoverPreview, setNewCoverPreview] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadCoverProgress, setUploadCoverProgress] = useState(0);
+
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return alert('Hanya file gambar yang diperbolehkan.');
+    if (f.size > 5 * 1024 * 1024) return alert('Ukuran file maksimal 5MB.');
+    setNewCoverFile(f);
+    const reader = new FileReader();
+    reader.onloadend = () => setNewCoverPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  };
+
+  const handleUploadCover = async () => {
+    if (!newCoverFile) return alert('Pilih file terlebih dahulu.');
+    setUploadingCover(true);
+    try {
+      const fileName = `comics/${comic.slug}/cover_${Date.now()}.${newCoverFile.name.split('.').pop()}`;
+      const task = uploadFileWithProgress(fileName, newCoverFile);
+      task.on('state_changed', (snap) => {
+        const pct = Math.round((snap.bytesTransferred / (snap.totalBytes || 1)) * 100);
+        setUploadCoverProgress(pct);
+      });
+      await new Promise<void>((resolve, reject) => task.on('state_changed', () => {}, (err) => reject(err), () => resolve()));
+      const url = await getFileURL(fileName);
+      await setDoc(doc(db, 'comics', comic.id), { coverUrl: url }, { merge: true });
+      // update local state so UI shows it immediately
+      setComic({ ...comic, coverUrl: url });
+      setNewCoverFile(null);
+      setNewCoverPreview(null);
+      setUploadCoverProgress(0);
+    } catch (err) {
+      console.error('Cover upload failed', err);
+      alert('Gagal mengupload cover. Periksa koneksi dan coba lagi.');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,6 +244,28 @@ export default function AdminEditKomikPage() {
             </CardContent>
           </Card>
         )}
+
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Ganti Cover</CardTitle></CardHeader>
+                  <CardContent className="space-y-2">
+                    <input type="file" accept="image/*" onChange={handleCoverSelect} />
+                    {newCoverPreview && (
+                      <div className="w-28 h-40 relative rounded overflow-hidden border">
+                        <img src={newCoverPreview} alt="preview" className="object-cover w-full h-full" />
+                      </div>
+                    )}
+                    {uploadingCover ? (
+                      <div>
+                        <p>Uploading: {uploadCoverProgress}%</p>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button onClick={handleUploadCover}>Upload & Simpan</Button>
+                        <Button variant="outline" onClick={() => { setNewCoverFile(null); setNewCoverPreview(null); }}>Batal</Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
         <Separator />
 
