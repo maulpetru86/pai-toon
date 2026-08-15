@@ -61,11 +61,11 @@ export default function AdminEditKomikPage() {
         setComic(comicData);
         setCategories(catsData);
         if (comicData) {
-          setTitle(comicData.title);
-          setDescription(comicData.description);
-          setCategoryId(comicData.categoryId);
-          setStatus(comicData.status);
-          setTagsInput(comicData.tags.join(", "));
+          setTitle(comicData.title || "");
+          setDescription(comicData.description || "");
+          setCategoryId(comicData.categoryId || "");
+          setStatus(comicData.status || "draft");
+          setTagsInput(comicData.tags?.join(", ") || "");
         }
       } catch (error) {
         console.error("Failed to load:", error);
