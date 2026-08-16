@@ -389,7 +389,7 @@ export default function AdminChapterBaruPage() {
 
         <Separator />
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             {saving && (
               <div className="space-y-1.5">
@@ -403,9 +403,9 @@ export default function AdminChapterBaruPage() {
               </div>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
             <Dialog>
-              <DialogTrigger render={<Button type="button" variant="outline" className="gap-2" disabled={pageFiles.length === 0} />}>
+              <DialogTrigger render={<Button type="button" variant="outline" className="gap-2 w-full sm:w-auto" disabled={pageFiles.length === 0} />}>
                 <Eye className="h-4 w-4" />
                 Preview
               </DialogTrigger>
@@ -429,10 +429,10 @@ export default function AdminChapterBaruPage() {
               </DialogContent>
             </Dialog>
 
-            <Link href={`/admin/komik/${comicId}/chapter`}>
-              <Button type="button" variant="outline" disabled={saving}>Batal</Button>
+            <Link href={`/admin/komik/${comicId}/chapter`} className="w-full sm:w-auto">
+              <Button type="button" variant="outline" disabled={saving} className="w-full sm:w-auto">Batal</Button>
             </Link>
-            <Button type="submit" disabled={saving || pageFiles.length === 0} className="gap-2 min-w-[140px]">
+            <Button type="submit" disabled={saving || pageFiles.length === 0} className="gap-2 min-w-[140px] w-full sm:w-auto">
               {saving ? (<><Loader2 className="h-4 w-4 animate-spin" />{overallProgress}%</>) : (<><Save className="h-4 w-4" />Simpan Chapter</>)}
             </Button>
           </div>

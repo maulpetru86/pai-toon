@@ -161,15 +161,15 @@ export default function AdminOverviewPage() {
         <CardHeader>
           <CardTitle className="text-base">Aksi Cepat</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Link href="/admin/komik/baru">
-            <Button className="gap-2"><BookOpen className="h-4 w-4" />Buat Komik Baru</Button>
+        <CardContent className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <Link href="/admin/komik/baru" className="w-full sm:w-auto">
+            <Button className="gap-2 w-full sm:w-auto"><BookOpen className="h-4 w-4" />Buat Komik Baru</Button>
           </Link>
-          <Link href="/admin/komik">
-            <Button variant="outline" className="gap-2"><Layers className="h-4 w-4" />Kelola Komik</Button>
+          <Link href="/admin/komik" className="w-full sm:w-auto">
+            <Button variant="outline" className="gap-2 w-full sm:w-auto"><Layers className="h-4 w-4" />Kelola Komik</Button>
           </Link>
-          <Link href="/admin/pengguna">
-            <Button variant="outline" className="gap-2"><Users className="h-4 w-4" />Kelola Pengguna</Button>
+          <Link href="/admin/pengguna" className="w-full sm:w-auto">
+            <Button variant="outline" className="gap-2 w-full sm:w-auto"><Users className="h-4 w-4" />Kelola Pengguna</Button>
           </Link>
         </CardContent>
       </Card>

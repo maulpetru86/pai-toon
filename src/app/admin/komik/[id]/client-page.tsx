@@ -202,18 +202,20 @@ export default function AdminEditKomikPage() {
   // ── Render: Main ──
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/komik">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Edit Komik</h1>
-          <p className="text-sm text-muted-foreground">{comic.slug}</p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/komik">
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Edit Komik</h1>
+            <p className="text-sm text-muted-foreground truncate">{comic.slug}</p>
+          </div>
         </div>
-        <Link href={`/admin/komik/${comic.id}/chapter`}>
-          <Button variant="outline" className="gap-2">
+        <Link href={`/admin/komik/${comic.id}/chapter`} className="block sm:inline-block">
+          <Button variant="outline" className="gap-2 w-full sm:w-auto">
             <Layers className="h-4 w-4" />
             Kelola Chapter
           </Button>
@@ -363,11 +365,11 @@ export default function AdminEditKomikPage() {
         <Separator />
 
         {/* ═══ Action buttons ═══ */}
-        <div className="flex justify-end gap-3">
-          <Link href="/admin/komik">
-            <Button type="button" variant="outline">Batal</Button>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+          <Link href="/admin/komik" className="w-full sm:w-auto">
+            <Button type="button" variant="outline" className="w-full sm:w-auto">Batal</Button>
           </Link>
-          <Button type="submit" disabled={saving} className="gap-2 min-w-[120px]">
+          <Button type="submit" disabled={saving} className="gap-2 min-w-[120px] w-full sm:w-auto">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan
           </Button>

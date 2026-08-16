@@ -294,15 +294,15 @@ export default function AdminKomikBaruPage() {
 
         <Separator />
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted-foreground">
             Komik akan disimpan sebagai <Badge variant="secondary" className="text-[10px]">Draft</Badge>
           </p>
-          <div className="flex gap-3">
-            <Link href="/admin/komik">
-              <Button type="button" variant="outline">Batal</Button>
+          <div className="flex flex-col-reverse sm:flex-row gap-3 w-full sm:w-auto">
+            <Link href="/admin/komik" className="w-full sm:w-auto">
+              <Button type="button" variant="outline" className="w-full sm:w-auto">Batal</Button>
             </Link>
-            <Button type="submit" disabled={saving} className="gap-2 min-w-[120px]">
+            <Button type="submit" disabled={saving} className="gap-2 min-w-[120px] w-full sm:w-auto">
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />

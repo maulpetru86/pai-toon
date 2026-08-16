@@ -433,9 +433,9 @@ export default function AdminEditChapterPage() {
           </div>
         )}
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
           <Dialog>
-            <DialogTrigger render={<Button type="button" variant="outline" className="gap-2" disabled={pageFiles.length === 0} />}>
+            <DialogTrigger render={<Button type="button" variant="outline" className="gap-2 w-full sm:w-auto" disabled={pageFiles.length === 0} />}>
               <Eye className="h-4 w-4" />
               Preview
             </DialogTrigger>
@@ -459,15 +459,15 @@ export default function AdminEditChapterPage() {
             </DialogContent>
           </Dialog>
 
-          <Link href={`/admin/komik/${params.id}/chapter`}>
-            <Button type="button" variant="outline">
+          <Link href={`/admin/komik/${params.id}/chapter`} className="w-full sm:w-auto">
+            <Button type="button" variant="outline" className="w-full sm:w-auto">
               Batal
             </Button>
           </Link>
           <Button
             type="submit"
             disabled={saving}
-            className="gap-2 min-w-[120px]"
+            className="gap-2 min-w-[120px] w-full sm:w-auto"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

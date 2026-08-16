@@ -52,11 +52,11 @@ export function FeaturedCarousel({ comics }: FeaturedCarouselProps) {
 
       <div
         ref={containerRef}
-        className="flex gap-4 overflow-x-auto no-scrollbar py-2 scroll-smooth"
+        className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide py-2 scroll-smooth"
         style={{ WebkitOverflowScrolling: "touch" }}
       >
         {comics.map((c) => (
-          <div key={c.id} className="min-w-[180px] w-[180px] md:w-[220px]">
+          <div key={c.id} className="min-w-[150px] w-[150px] sm:min-w-[180px] sm:w-[180px] md:w-[220px]">
             <ComicCard comic={c} />
           </div>
         ))}

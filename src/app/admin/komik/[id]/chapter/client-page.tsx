@@ -82,23 +82,25 @@ export default function AdminChapterPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/komik">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate">
-            Chapter: {comic.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {chapters.length} chapter total ·{" "}
-            {chapters.filter((c) => c.isPublished).length} terbit
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Link href="/admin/komik">
+            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
+              Chapter: {comic.title}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {chapters.length} chapter total ·{" "}
+              {chapters.filter((c) => c.isPublished).length} terbit
+            </p>
+          </div>
         </div>
-        <Link href={`/admin/komik/${comicId}/chapter/baru`}>
-          <Button className="gap-2">
+        <Link href={`/admin/komik/${comicId}/chapter/baru`} className="block sm:inline-block">
+          <Button className="gap-2 w-full sm:w-auto">
             <Plus className="h-4 w-4" />
             Tambah Chapter
           </Button>
@@ -167,7 +169,7 @@ export default function AdminChapterPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <Link href={`/admin/komik/${comicId}/chapter/${chapter.id}`}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Pencil className="h-3.5 w-3.5" />
